@@ -91,6 +91,9 @@ export function makeBundle(input: {
     snapshotAt: shared.snapshotAt,
     order: {
       id: order.id, reference: order.reference, lane: order.displayLane, status: order.status, routeKind: order.routeKind,
+      agentMode: order.agentMode,
+      agentDecision: order.agentDecision,
+      waitingOnDescription: order.waitingOnDescription,
       createdAt: iso(order.createdAt), updatedAt: iso(order.updatedAt), details: order.details,
       pickupAddressId: order.pickupAddressId, deliveryAddressId: order.deliveryAddressId,
       pickupSiteId: order.pickupSiteId, deliverySiteId: order.deliverySiteId,
@@ -128,12 +131,19 @@ export function makeBundle(input: {
   }
 }
 
-/** Every order with the records the board reads, in one pass over the database. */
-export async function loadBoardBundles(): Promise<{ snapshotAt: string | null; bundles: Bundle[] }> {
+/** Entity pages can read all orders; the Control Room selects exceptions in SQL. */
+export async function loadBoardBundles({ exceptionsOnly = false }: { exceptionsOnly?: boolean } = {}): Promise<{ snapshotAt: string | null; bundles: Bundle[] }> {
   const shared = await loadShared()
   const dir = shared.makeDirectory()
   const [orderRows, itemRows, alertRows, threadRows, relatedRows, eventRows] = await Promise.all([
-    db.select().from(orders).orderBy(desc(orders.updatedAt), asc(orders.reference)),
+    db.select().from(orders).where(exceptionsOnly ? sql`(
+      exists (select 1 from ${alerts} where ${alerts.orderId} = ${orders.id}
+        and ${alerts.status} in ('OPEN', 'ACKNOWLEDGED'))
+      or (${orders.agentMode} != 'MANUAL_COMPLETE' and (${orders.status} = 'BLOCKED'
+        or ${orders.details} ->> 'readiness_status' = 'BLOCKED'))
+      or ${orders.agentMode} = 'MANUAL'
+      or ${orders.status} = 'follow_up'
+    )` : undefined).orderBy(desc(orders.updatedAt), asc(orders.reference)),
     db.select({ item: orderItems, vehicle: vehicles }).from(orderItems).innerJoin(vehicles, eq(orderItems.vehicleId, vehicles.id)),
     db.select().from(alerts),
     db.select().from(conversations),

@@ -1,0 +1,28 @@
+﻿import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import { stripTypeScriptTypes } from 'node:module'
+const asModule = (source) => 'data:text/javascript;base64,' + Buffer.from(stripTypeScriptTypes(source)).toString('base64')
+const contractUrl = asModule(await readFile(new URL('../lib/agent.ts', import.meta.url), 'utf8'))
+const requestSource = (await readFile(new URL('../lib/agent-request.ts', import.meta.url), 'utf8')).replace('"./agent"', JSON.stringify(contractUrl))
+const { fetchAgentProposal } = await import(asModule(requestSource))
+const { buildAgentPrompt } = await import(contractUrl)
+const proposal = { investigation_summary: ['Fictional evidence.'], proposed_action: 'Review with an operator.', decision_button_text: 'Approve review' }
+const options = (fetchImpl) => ({ signal: new AbortController().signal, timeoutMs: 20, fetchImpl })
+await assert.rejects(fetchAgentProposal({}, options(() => new Promise(() => {}))), /took too long/)
+await assert.rejects(fetchAgentProposal({}, options(async () => ({ ok: true, json: () => new Promise(() => {}) }))), /took too long/)
+await assert.rejects(fetchAgentProposal({}, options(async () => Response.json({ error: 'Agent is busy.' }, { status: 503 }))), /Agent is busy/)
+await assert.rejects(fetchAgentProposal({}, options(async () => new Response('gateway error', { status: 504 }))), /couldn't be loaded/)
+await assert.rejects(fetchAgentProposal({}, options(async () => Response.json({ invalid: true }))), /invalid proposal/)
+assert.deepEqual(await fetchAgentProposal({}, options(async () => Response.json(proposal))), proposal)
+const controller = new AbortController()
+const cancelled = fetchAgentProposal({}, { signal: controller.signal, fetchImpl: () => new Promise(() => {}) })
+controller.abort()
+await assert.rejects(cancelled, /cancelled/)
+const events = Array.from({ length: 100 }, (_, i) => ({ id: `ev-${i}`, recorded_at: `2026-10-${String(Math.floor(i / 4) + 1).padStart(2, '0')}T00:00:00Z`, details: { text: 'a'.repeat(1000) } }))
+const prompt = buildAgentPrompt(events, { evidence: 'b'.repeat(20_000) })
+assert.ok(prompt.length < 10_000, `Prompt too large: ${prompt.length}`)
+const selected = JSON.parse(prompt.slice(prompt.indexOf('\n') + 1))
+assert.ok(selected.omitted_event_count > 0)
+assert.equal(selected.context.truncated, true)
+assert.ok(selected.events.some((event) => event.id === 'ev-99'))
+console.log('Verified proposal loading: stalled fetch and stalled body deadlines, cancellation, error display, valid proposals, and bounded evidence prompts.')

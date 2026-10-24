@@ -7,7 +7,7 @@ export type Section = "board" | "inbox" | "customers" | "drivers" | "sites"
 
 const GROUPS: { label: string; links: { section: Section; href: string; label: string; icon: string }[] }[] = [
   { label: "Work", links: [
-    { section: "board", href: "/", label: "Orders", icon: "car" },
+    { section: "board", href: "/", label: "Control Room", icon: "car" },
     { section: "inbox", href: "/inbox", label: "Inbox", icon: "inbox" },
   ] },
   { label: "People and places", links: [

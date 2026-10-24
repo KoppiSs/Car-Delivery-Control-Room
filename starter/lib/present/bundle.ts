@@ -26,7 +26,7 @@ export type SiteRow = { id: string; name: string; city: string; country: string;
 export type Bundle = {
   snapshotAt: string | null
   order: {
-    id: string; reference: string; lane: string; status: string; routeKind: string
+    id: string; reference: string; lane: string; status: string; routeKind: string; agentMode?: string; agentDecision?: string; waitingOnDescription?: string | null
     createdAt: string; updatedAt: string; details: Row
     pickupAddressId: string; deliveryAddressId: string; pickupSiteId: string | null; deliverySiteId: string | null
   }

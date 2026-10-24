@@ -19,6 +19,17 @@ export function buildBoardCard(bundle: Bundle): BoardCard {
   const attention = deriveAttention(bundle)
   const { decisive } = deriveKeyDates(bundle)
   const tone = attention.length ? strongestTone(attention.map((item) => item.tone)) : "ok"
+  // A transfer of ownership does not change the underlying problem. Retain its
+  // source alert even after its automated review episode has been closed.
+  const problemAlerts = bundle.alerts.filter((alert) => ["OPEN", "ACKNOWLEDGED"].includes(alert.status)
+    || (order.agentMode?.startsWith("MANUAL") && alert.details.resolution_kind === "MANUAL_TAKEOVER")
+    || (order.status === "follow_up" && alert.details.resolution_kind === "MOCK_FOLLOW_UP"))
+  const rank = (alert: typeof problemAlerts[number]) => {
+    const status = alert.status === "RESOLVED" ? str(alert.details.takeover_previous_status) ?? str(alert.details.followup_previous_status)
+      ?? (alert.details.acknowledged_at ? "ACKNOWLEDGED" : "OPEN") : alert.status
+    return status === "ACKNOWLEDGED" ? 2 : ["high", "critical"].includes(alert.severity) ? 0 : 1
+  }
+  const problem = [...problemAlerts].sort((a, b) => rank(a) - rank(b) || a.triggeredAt.localeCompare(b.triggeredAt))[0]
 
   const work: WorkLine[] = []
   const first = attention[0]
@@ -61,6 +72,12 @@ export function buildBoardCard(bundle: Bundle): BoardCard {
 
   return {
     id: order.id,
+    agentMode: order.agentMode,
+    agentDecision: order.agentDecision,
+    waitingOnDescription: order.waitingOnDescription,
+    problemTitle: problem ? label(problem.signal) : "This order is blocked",
+    problemDetail: problem?.summary ?? "Review the order and confirm what is needed before work can continue.",
+    problemSeverity: problem?.severity,
     reference: order.reference,
     displayLane: order.lane,
     status: order.status,

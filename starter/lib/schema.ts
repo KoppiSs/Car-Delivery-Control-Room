@@ -1,4 +1,5 @@
 import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core"
+import type { AgentProposal } from "./agent"
 
 export const datasetMetadata = pgTable("dataset_metadata", {
   id: text("id").primaryKey(),
@@ -64,10 +65,40 @@ export const orders = pgTable("orders", {
   displayLane: text("display_lane").notNull(),
   status: text("status").notNull(),
   routeKind: text("route_kind").notNull(),
+  agentProposal: jsonb("agent_proposal").$type<AgentProposal>(),
+  agentMode: text("agent_mode").notNull().default("AGENT"),
+  agentRevision: integer("agent_revision").notNull().default(0),
+  agentDecision: text("agent_decision").notNull().default("PENDING"),
+  agentDecisionAt: timestamp("agent_decision_at", { withTimezone: true }),
+  waitingOnDescription: text("waiting_on_description"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
   details: jsonb("details").$type<Record<string, unknown>>().notNull(),
 }, (table) => [index("orders_lane_updated_idx").on(table.displayLane, table.updatedAt)])
+
+export const agentProposalFeedback = pgTable("agent_proposal_feedback", {
+  id: text("id").primaryKey(),
+  orderId: text("order_id").notNull().references(() => orders.id),
+  decision: text("decision").notNull(),
+  correction: text("correction"),
+  previousProposal: jsonb("previous_proposal").$type<AgentProposal>(),
+  replacementProposal: jsonb("replacement_proposal").$type<AgentProposal>(),
+  outcome: text("outcome").notNull(),
+  operatorId: text("operator_id").notNull().default("operator"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+}, (table) => [index("agent_feedback_order_created_idx").on(table.orderId, table.createdAt)])
+
+export const agentMockActions = pgTable("agent_mock_actions", {
+  id: text("id").primaryKey(),
+  orderId: text("order_id").notNull().references(() => orders.id),
+  actionType: text("action_type").notNull(),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+  waitingOnDescription: text("waiting_on_description").notNull(),
+  status: text("status").notNull().default("WAITING"),
+  eventId: text("event_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("agent_mock_actions_order_created_idx").on(table.orderId, table.createdAt)])
 
 export const orderItems = pgTable("order_items", {
   id: text("id").primaryKey(),

@@ -24,14 +24,14 @@ function laneSort(lane: string) {
 
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get("q")?.trim().toLowerCase() ?? ""
-  const { snapshotAt, bundles } = await loadBoardBundles()
+  const { snapshotAt, bundles } = await loadBoardBundles({ exceptionsOnly: true })
   const all = bundles.map(buildBoardCard)
   const counts = Object.fromEntries(LANE_ORDER.map((lane) => [lane, all.filter((card) => card.displayLane === lane).length]))
   const attentionCounts = Object.fromEntries(LANE_ORDER.map((lane) => [lane, all.filter((card) => card.displayLane === lane && card.attention.length > 0).length]))
   const matches = query ? all.filter((card) => [
     card.reference, card.customer, card.vehicle, card.origin, card.destination, card.plate ?? "",
   ].some((field) => field.toLowerCase().includes(query))) : all
-  const visible = LANE_ORDER.flatMap((lane) => matches.filter((card) => card.displayLane === lane).sort(laneSort(lane)))
+  const visible = matches.sort(laneSort("control-room"))
   const body: Overview = { snapshotAt, total: all.length, counts, attentionCounts, visible, query }
   return NextResponse.json(body)
 }

@@ -1,79 +1,74 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { LANES } from "@/lib/present/labels"
+import { useCallback, useEffect, useState } from "react"
 import type { Overview } from "@/lib/present/types"
+import { fmtDateTime } from "@/lib/present/time"
 import { AppFrame } from "./components/app-frame"
-import { Card } from "./components/card"
 import { Icon } from "./components/icons"
+import { OrderDrawer } from "./components/order-drawer"
+import { ControlOrderCard } from "./components/control-order-card"
+import { REVIEW_COLUMNS, reviewType } from "@/lib/present/review"
 
 export default function Home() {
   const [search, setSearch] = useState("")
-  const [onlyAttention, setOnlyAttention] = useState(false)
   const [overview, setOverview] = useState<Overview | null>(null)
   const [error, setError] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [refresh, setRefresh] = useState(0)
+  const [selectedOrder, setSelectedOrder] = useState<{ id: string; reference: string } | null>(null)
+  const closeOrder = useCallback(() => setSelectedOrder(null), [])
+  useEffect(() => {
+    const refreshOrders = () => setRefresh((value) => value + 1)
+    window.addEventListener("orders-updated", refreshOrders)
+    return () => window.removeEventListener("orders-updated", refreshOrders)
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
     const timer = setTimeout(() => {
+      setLoading(true)
+      setError("")
       fetch(`/api/overview?q=${encodeURIComponent(search)}`, { signal: controller.signal })
-        .then((response) => { if (!response.ok) throw new Error("Could not load orders"); return response.json() as Promise<Overview> })
-        .then((data) => { setOverview(data); setError("") })
-        .catch((cause: unknown) => { if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Could not load orders") })
+        .then((response) => { if (!response.ok) throw new Error("Your orders couldn't be loaded."); return response.json() as Promise<Overview> })
+        .then((data) => { setOverview(data); setLoading(false) })
+        .catch(() => { if (!controller.signal.aborted) { setError("Your orders couldn't be loaded. Please try again."); setLoading(false) } })
     }, search ? 180 : 0)
     return () => { clearTimeout(timer); controller.abort() }
-  }, [search])
+  }, [search, refresh])
 
-  const visible = useMemo(() => {
-    const cards = overview?.visible ?? []
-    return onlyAttention ? cards.filter((card) => card.attention.length > 0) : cards
-  }, [overview, onlyAttention])
-  const attentionTotal = overview ? Object.values(overview.attentionCounts).reduce((sum, count) => sum + count, 0) : 0
-  const filtering = !!search || onlyAttention
-  const lanes = LANES.filter(([lane]) => !filtering || visible.some((card) => card.displayLane === lane))
-
-  return <AppFrame section="board" board snapshotAt={overview?.snapshotAt ?? null}><main className="board-page">
-    <div className="board-head">
-      <div className="board-title">
-        <h1>Orders</h1>
-        <p className="board-sub">{overview
-          ? <><b>{overview.total}</b> orders · <b>{overview.counts.moving ?? 0}</b> moving · <b>{attentionTotal}</b> need a person</>
-          : "Loading the snapshot"}</p>
-      </div>
-      <div className="board-tools">
-        <label className="search">
-          <span className="sr-only">Search orders</span>
-          <Icon name="search" />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Reference, car, plate, customer or city" />
-          {search && <button type="button" className="search-clear" onClick={() => setSearch("")} aria-label="Clear search"><Icon name="arrow" size={14} style={{ transform: "rotate(45deg)" }} /></button>}
-        </label>
-        <button type="button" className="toggle" aria-pressed={onlyAttention} onClick={() => setOnlyAttention((value) => !value)}>
-          <Icon name="alert" size={14} /> Needs a person{overview ? <b>{attentionTotal}</b> : null}
-        </button>
-      </div>
-    </div>
-    {error && <p className="board-error" role="alert">{error}. Check that the local database is running and seeded.</p>}
-    <section className="board" aria-label="Order lanes">
-      {lanes.map(([lane, label]) => {
-        const cards = visible.filter((card) => card.displayLane === lane)
-        const total = overview?.counts[lane] ?? 0
-        const needing = overview?.attentionCounts[lane] ?? 0
-        return <div className={`lane lane-${lane}`} key={lane}>
-          <header className="lane-head">
-            <h2>{label}</h2>
-            <span className="lane-count num">{filtering ? `${cards.length} of ${total}` : total}</span>
-            {needing > 0 && !onlyAttention && <span className="lane-attention num">{needing} need a person</span>}
-          </header>
-          <div className="lane-scroll">
-            {!overview && !error && <ul className="lane-list" aria-busy="true">{[0, 1, 2].map((index) => <li className="skeleton" key={index} />)}</ul>}
-            {overview && cards.length === 0 && <p className="lane-empty">{filtering ? "No matching orders in this lane." : "No orders in this lane."}</p>}
-            {cards.length > 0 && <ul className="lane-list">{cards.map((card) => <li key={card.id}><Card card={card} /></li>)}</ul>}
-          </div>
+  return <AppFrame section="board" snapshotAt={overview?.snapshotAt}>
+    <main className="control-room control-room-columns">
+      <header className="control-header">
+        <p className="control-eyebrow">BAHN / OPERATIONS</p>
+        <h1>A little attention.<br />A clear way forward.</h1>
+        <p className="control-intro">The deliveries that need your judgment. Everything else stays out of your way.</p>
+      </header>
+      <section className="control-queue" aria-labelledby="queue-heading" aria-busy={loading}>
+        <div className="control-toolbar">
+          <div><h2 id="queue-heading">Needs your attention {overview && <span className="control-count">{overview.total}</span>}</h2>
+            <p>Active alerts, blocked orders and manual follow-ups</p></div>
+          <label className="search control-search">
+            <Icon name="search" size={17} />
+            <span className="sr-only">Search orders needing attention</span>
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find an order…" />
+            {search && <button type="button" className="search-clear" onClick={() => setSearch("")} aria-label="Clear search">×</button>}
+          </label>
         </div>
-      })}
-      {overview && filtering && visible.length === 0 && <p className="board-empty">
-        {search ? <>No orders match “{search}”{onlyAttention ? " among the orders that need a person" : ""}.</> : "No order in the snapshot needs a person."}
-      </p>}
-    </section>
-  </main></AppFrame>
+        <div role="status" className="sr-only">{loading ? "Loading orders" : error || `${overview?.visible.length ?? 0} orders shown`}</div>
+        {error ? <div className="control-empty" role="alert"><h3>Let’s try that again</h3><p>{error}</p><button type="button" onClick={() => setRefresh((value) => value + 1)}>Try again</button></div>
+          : loading && !overview ? <div className="control-loading" aria-label="Loading orders">{[0, 1, 2].map((index) => <div className="control-placeholder" key={index} />)}</div>
+          : overview?.visible.length ? <div className="review-columns">{REVIEW_COLUMNS.map((column) => {
+            const cards = overview.visible.filter((card) => reviewType(card) === column.id)
+            return <section className={`review-column review-column-${column.id}`} key={column.id} aria-labelledby={`review-${column.id}`}>
+              <header className="review-column-head"><h3 id={`review-${column.id}`}>{column.title}<span className="control-count">{cards.length}</span></h3><p>{column.description}</p></header>
+              {cards.length ? <ul className="control-list">{cards.map((card) => <li key={card.id}><ControlOrderCard card={card} onOpen={setSelectedOrder} /></li>)}</ul>
+                : <p className="review-column-empty">No orders in this review group.</p>}
+            </section>
+          })}</div>
+          : <div className="control-empty"><span className="control-empty-icon"><Icon name={search ? "search" : "check"} size={24} /></span><h3>{search ? "No matching orders" : "Nothing needs your attention"}</h3><p>{search ? "Try a reference, car, customer or city. Search covers orders needing attention." : "There are no active alerts or blocked orders in this snapshot."}</p>{search && <button type="button" onClick={() => setSearch("")}>Clear search</button>}</div>}
+        <footer className="control-note">{overview?.snapshotAt ? `As of ${fmtDateTime(overview.snapshotAt)} · ` : ""}Fictional operations snapshot</footer>
+      </section>
+    </main>
+    {selectedOrder && <OrderDrawer key={selectedOrder.id} order={selectedOrder} onDismiss={closeOrder} />}
+  </AppFrame>
 }

@@ -163,6 +163,40 @@ export function describeEvent(event: EventRow, bundle: Bundle): HistoryEvent {
       text = `Alert acknowledged${actorName ? ` by ${actorName}` : ""}`
       detail = scalarChanges(changes)
       break
+    case "agent.proposal_overridden":
+      text = "Operator requested a revised proposal"
+      detail = str(changes.correction)
+      break
+    case "agent.proposal_approved":
+      text = "Operator approved the agent proposal"
+      detail = "Approval recorded; follow-up has not been executed."
+      break
+    case "agent.proposal_rejected":
+      text = "Operator rejected the agent proposal"
+      break
+    case "agent.proposal_revised":
+      text = "Revised agent proposal ready for review"
+      break
+    case "agent.manual_takeover":
+      text = "Operator took over this order"
+      detail = str(changes.resolution_reason)
+      break
+    case "manual.note_added":
+      text = "Manual follow-up note saved"
+      detail = str(changes.note)
+      break
+    case "manual.resolution_recorded":
+      text = "Operator recorded a manual resolution"
+      detail = str(changes.note)
+      break
+    case "agent.resolution_mocked":
+      text = "Simulated resolution recorded"
+      detail = str(changes.resolution_reason)
+      break
+    case "agent.follow_up_started":
+      text = "Mock follow-up action recorded"
+      detail = str(changes.waiting_on_description)
+      break
     case "alert.resolved":
       text = "Alert resolved"
       detail = scalarChanges(changes)

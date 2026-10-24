@@ -1,0 +1,21 @@
+﻿import assert from 'node:assert/strict'
+import { createRequire } from 'node:module'
+const require = createRequire(import.meta.url)
+const { REVIEW_COLUMNS, reviewType } = require('../lib/present/review.ts')
+assert.deepEqual(REVIEW_COLUMNS.map((column) => column.id), ['priority', 'review', 'followup', 'manual'])
+const base = { status: 'IN_TRANSIT', agentMode: 'AGENT', agentDecision: 'PENDING', openAlerts: [], acknowledgedAlerts: [] }
+assert.equal(reviewType({ ...base, openAlerts: ['critical'] }), 'priority')
+assert.equal(reviewType({ ...base, openAlerts: ['medium'] }), 'review')
+assert.equal(reviewType({ ...base, status: 'BLOCKED' }), 'review')
+assert.equal(reviewType({ ...base, status: 'follow_up' }), 'followup')
+assert.equal(reviewType({ ...base, acknowledgedAlerts: ['high'] }), 'followup')
+assert.equal(reviewType({ ...base, openAlerts: ['high'], agentDecision: 'APPROVED' }), 'followup')
+assert.equal(reviewType({ ...base, agentDecision: 'REJECTED' }), 'followup')
+assert.equal(reviewType({ ...base, openAlerts: ['high'], agentMode: 'MANUAL' }), 'manual')
+const response = await fetch((process.env.APP_URL ?? 'http://localhost:3000') + '/api/overview')
+assert.equal(response.status, 200)
+const overview = await response.json()
+const groups = REVIEW_COLUMNS.map((column) => overview.visible.filter((card) => reviewType(card) === column.id))
+assert.equal(groups.flat().length, overview.visible.length)
+assert.equal(new Set(groups.flat().map((card) => card.id)).size, overview.visible.length)
+console.log(`Verified left-to-right review groups and exclusive classification for ${overview.visible.length} orders.`)

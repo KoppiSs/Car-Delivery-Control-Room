@@ -73,7 +73,7 @@ async function seed(): Promise<void> {
 
   // A failed insert rolls back the whole replacement, so the app never serves a partial seed.
   await db.transaction(async (tx) => {
-    await tx.execute(sql`TRUNCATE dataset_metadata, customers, sites, addresses, vehicles, drivers, orders, order_items, conversations, messages, alerts, operational_events, related_records`)
+    await tx.execute(sql`TRUNCATE agent_mock_actions, agent_proposal_feedback, dataset_metadata, customers, sites, addresses, vehicles, drivers, orders, order_items, conversations, messages, alerts, operational_events, related_records`)
     await tx.insert(schema.datasetMetadata).values({
       id: "current", snapshotAt: new Date(manifest.snapshot_at),
       releaseStatus: manifest.release_status, details: manifest,

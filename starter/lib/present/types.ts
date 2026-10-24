@@ -66,6 +66,12 @@ export type KeyDate = {
 export type WorkLine = { icon: "driver" | "offer" | "alert" | "work" | "waiting" | "proposal" | "incident" | "note"; text: string; tone: Tone }
 
 export type BoardCard = {
+  agentMode?: string
+  agentDecision?: string
+  problemTitle?: string
+  problemDetail?: string
+  problemSeverity?: string
+  waitingOnDescription?: string | null
   id: string
   reference: string
   displayLane: string
