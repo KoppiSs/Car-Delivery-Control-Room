@@ -35,6 +35,8 @@ export type AttentionKind =
   | "claim" | "custody" | "check" | "inbox"
 
 export type AttentionItem = {
+  /** An uncertain inbox candidate is context, not confirmed work on this order. */
+  requiresReview?: boolean
   kind: AttentionKind
   tone: Tone
   title: string
@@ -66,6 +68,7 @@ export type KeyDate = {
 export type WorkLine = { icon: "driver" | "offer" | "alert" | "work" | "waiting" | "proposal" | "incident" | "note"; text: string; tone: Tone }
 
 export type BoardCard = {
+  isBlocked?: boolean
   agentMode?: string
   agentDecision?: string
   problemTitle?: string

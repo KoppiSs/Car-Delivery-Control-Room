@@ -46,7 +46,7 @@ export default function Home() {
       <section className="control-queue" aria-labelledby="queue-heading" aria-busy={loading}>
         <div className="control-toolbar">
           <div><h2 id="queue-heading">Needs your attention {overview && <span className="control-count">{overview.total}</span>}</h2>
-            <p>Active alerts, blocked orders and manual follow-ups</p></div>
+            <p>Active risks, evidence checks and owned follow-ups</p></div>
           <label className="search control-search">
             <Icon name="search" size={17} />
             <span className="sr-only">Search orders needing attention</span>
@@ -65,7 +65,7 @@ export default function Home() {
                 : <p className="review-column-empty">No orders in this review group.</p>}
             </section>
           })}</div>
-          : <div className="control-empty"><span className="control-empty-icon"><Icon name={search ? "search" : "check"} size={24} /></span><h3>{search ? "No matching orders" : "Nothing needs your attention"}</h3><p>{search ? "Try a reference, car, customer or city. Search covers orders needing attention." : "There are no active alerts or blocked orders in this snapshot."}</p>{search && <button type="button" onClick={() => setSearch("")}>Clear search</button>}</div>}
+          : <div className="control-empty"><span className="control-empty-icon"><Icon name={search ? "search" : "check"} size={24} /></span><h3>{search ? "No matching orders" : "Nothing needs your attention"}</h3><p>{search ? "Try a reference, car, customer or city. Search covers orders needing attention." : "There are no active risks or outstanding checks in this snapshot."}</p>{search && <button type="button" onClick={() => setSearch("")}>Clear search</button>}</div>}
         <footer className="control-note">{overview?.snapshotAt ? `As of ${fmtDateTime(overview.snapshotAt)} · ` : ""}Fictional operations snapshot</footer>
       </section>
     </main>

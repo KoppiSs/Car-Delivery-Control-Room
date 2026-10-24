@@ -12,6 +12,7 @@ const { code } = transformSync(source, { filename: 'control-order-card.tsx', jsc
 const dependencies = (name) => {
   if (name === 'next/link') return ({ children, href, className }) => React.createElement('a', { href, className }, children)
   if (name === '@/lib/present/time') return require('../lib/present/time.ts')
+  if (name === '@/lib/present/review') return require('../lib/present/review.ts')
   if (name === './icons') return { Icon: () => null }
   return require(name)
 }
@@ -25,4 +26,12 @@ assert.ok(html.includes('follow-up-waiting'))
 assert.ok(html.includes('Waiting on'))
 assert.ok(html.includes(executableFields.waiting_on_description))
 assert.ok(html.includes('Tracking gap'), 'The original problem must stay visible')
+for (const override of [{ problemSeverity: 'critical' }, { problemSeverity: 'high', agentDecision: 'PENDING' },
+  { status: 'FOLLOW_UP', problemSeverity: 'critical', openAlerts: ['critical'], attention: [{ kind: 'incident', tone: 'danger' }] },
+  { status: 'IN_TRANSIT', agentMode: 'MANUAL', problemSeverity: 'high' },
+  { status: 'WAITING_FOR_PICKUP', agentDecision: 'PENDING', acknowledgedAlerts: ['high'], problemSeverity: 'high' }]) {
+  const output = renderToStaticMarkup(React.createElement(loaded.exports.ControlOrderCard, { card: { ...card, ...override }, onOpen() {} }))
+  assert.ok(!output.includes('Priority review'), 'Owned Follow-up/Manual cards must not display an old priority badge')
+  assert.ok(!output.includes('control-badge urgent'))
+}
 console.log('Verified Follow-up card prominently renders waiting-on text while retaining the problem title.')

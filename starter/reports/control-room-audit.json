@@ -1,0 +1,1867 @@
+{
+  "snapshotAt": "2026-10-21T09:00:00.000Z",
+  "auditedAt": "2026-10-24T15:19:58.179Z",
+  "total": 100,
+  "needsAttention": 40,
+  "quiet": 60,
+  "newlySurfaced": 23,
+  "counts": {
+    "Priority review": 9,
+    "Needs review": 18,
+    "Follow-up": 13,
+    "Manual control": 0
+  },
+  "orders": [
+    {
+      "id": "ord-00004",
+      "reference": "CD-420004",
+      "status": "DELIVERED",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00009",
+      "reference": "CD-420009",
+      "status": "NEW",
+      "column": "followup",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Waiting on the customer's vehicle identity",
+          "detail": "Order information with Suvellio Motors",
+          "kind": "waiting",
+          "sourceId": "conv-x0d98299030fa18f5",
+          "at": "2026-10-21T11:00:00Z"
+        },
+        {
+          "title": "Identity input required",
+          "detail": "Neither a VIN nor a registration is recorded; the candidate pickup slot is not selected.",
+          "kind": "work",
+          "sourceId": "work-x536223efaa59e0b6",
+          "at": "2026-10-21T15:00:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00010",
+      "reference": "CD-420010",
+      "status": "NEW",
+      "column": "followup",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Pickup contact handle required",
+          "detail": "The pickup desk has no direct contact handle and has not confirmed the handover.",
+          "kind": "work",
+          "sourceId": "work-xe5ffe78960670002",
+          "at": "2026-10-21T15:00:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00014",
+      "reference": "CD-420014",
+      "status": "WAITING_FOR_PICKUP",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00015",
+      "reference": "CD-420015",
+      "status": "NEW",
+      "column": "followup",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Waiting on site confirmation",
+          "detail": "Pickup and release with Suvellio Motors",
+          "kind": "waiting",
+          "sourceId": "conv-x636a004c01e1dcbd",
+          "at": "2026-10-21T10:00:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00020",
+      "reference": "CD-420020",
+      "status": "DELIVERED",
+      "column": "followup",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Waiting on operator follow-up",
+          "detail": "Documents and proof with Velantora Automotive Group",
+          "kind": "waiting",
+          "sourceId": "conv-x44f5f8b07eccc04e",
+          "at": "2026-10-21T13:00:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-x0fe69bf9925c4660",
+        "observedAt": "2026-10-18T16:00:00Z",
+        "receivedAt": "2026-10-18T16:03:00Z"
+      },
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00023",
+      "reference": "CD-420023",
+      "status": "NEW",
+      "column": "followup",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Pickup access check required",
+          "detail": "The pickup is specified only as Berlin, without a street address; access also needs verification despite the candidate window.",
+          "kind": "work",
+          "sourceId": "work-x63c3d7a51c26655e",
+          "at": "2026-10-21T15:00:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00055",
+      "reference": "CD-420055",
+      "status": "DELIVERED",
+      "column": "review",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Open alert: Condition claim review",
+          "detail": "Review post delivery condition for CD-420055; source is a conversation, not a verified outcome.",
+          "kind": "alert",
+          "sourceId": "alert-x15a3a8c8be8357bf",
+          "at": "2026-10-21T07:44:00.000Z"
+        },
+        {
+          "title": "Agent proposal awaiting review",
+          "detail": "Compare pickup, delivery and customer photos before attributing the reported mark.",
+          "kind": "proposal",
+          "sourceId": "agent-x67ebc5bd109d4ac1",
+          "at": "2026-10-21T08:28:00Z"
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-x15a3a8c8be8357bf",
+          "status": "OPEN",
+          "signal": "CONDITION_CLAIM_REVIEW"
+        }
+      ],
+      "tracking": {
+        "sourceId": "track-xfb8569a2944bc9b1",
+        "observedAt": "2026-10-21T08:33:00Z",
+        "receivedAt": "2026-10-21T08:36:00Z"
+      },
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00071",
+      "reference": "CD-420071",
+      "status": "IN_TRANSIT",
+      "column": "followup",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Owned alert: Pickup proof rejected",
+          "detail": "Pickup photos remain rejected; site separately confirmed vehicle identity. Pickup condition evidence still needs review. Acknowledged is not resolved.",
+          "kind": "owned_alert",
+          "sourceId": "alert-x2ac9aec67ad85d7a",
+          "at": "2026-10-20T13:10:00Z"
+        },
+        {
+          "title": "Pickup evidence followup",
+          "detail": "Pickup proof remains rejected after a wrong-car photo set.",
+          "kind": "work",
+          "sourceId": "work-xbe01b6d42115ad62",
+          "at": "2026-10-21T10:00:00Z"
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-x2ac9aec67ad85d7a",
+          "status": "ACKNOWLEDGED",
+          "signal": "PICKUP_PROOF_REJECTED"
+        }
+      ],
+      "tracking": {
+        "sourceId": "track-x0a13f87e53da0fdc",
+        "observedAt": "2026-10-21T08:04:00Z",
+        "receivedAt": "2026-10-21T08:07:00Z"
+      },
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00075",
+      "reference": "CD-420075",
+      "status": "IN_TRANSIT",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-x9d8ce2299c7484b3",
+        "observedAt": "2026-10-21T08:11:00Z",
+        "receivedAt": "2026-10-21T08:12:00Z"
+      },
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00089",
+      "reference": "CD-420089",
+      "status": "WAITING_FOR_PICKUP",
+      "column": "review",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Pickup details not verified for this order",
+          "detail": "Contact unconfirmed, access needs verification. Not an incident; check before the driver travels.",
+          "kind": "check",
+          "sourceId": "ep-x9ba88828235d1691",
+          "at": null
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00111",
+      "reference": "CD-420111",
+      "status": "DELIVERED",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00118",
+      "reference": "CD-420118",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00123",
+      "reference": "CD-420123",
+      "status": "WAITING_FOR_PICKUP",
+      "column": "review",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Pickup details not verified for this order",
+          "detail": "Contact unconfirmed, access confirmed. Not an incident; check before the driver travels.",
+          "kind": "check",
+          "sourceId": "ep-xf09aaa14b82ddde0",
+          "at": null
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00145",
+      "reference": "CD-420145",
+      "status": "IN_TRANSIT",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-xf9ba55e59c242ac4",
+        "observedAt": "2026-10-21T08:32:00Z",
+        "receivedAt": "2026-10-21T08:34:00Z"
+      },
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00154",
+      "reference": "CD-420154",
+      "status": "WAITING_FOR_PICKUP",
+      "column": "followup",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Approved proposal not yet executed",
+          "detail": "Recheck a feasible vehicle crossing and driver positioning without changing the promise.",
+          "kind": "proposal",
+          "sourceId": "agent-x68cbbd7e6e58691c",
+          "at": "2026-10-21T08:42:00Z"
+        },
+        {
+          "title": "Owned alert: French import travel decision",
+          "detail": "Earliest crossing sold out; driver positioning and customer promise need a reviewed plan before purchase. Acknowledged is not resolved.",
+          "kind": "owned_alert",
+          "sourceId": "alert-xe7b44c310860f4c5",
+          "at": "2026-10-21T08:34:00Z"
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-xe7b44c310860f4c5",
+          "status": "ACKNOWLEDGED",
+          "signal": "FR_IMPORT_TRAVEL_DECISION"
+        }
+      ],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00164",
+      "reference": "CD-420164",
+      "status": "DELIVERED",
+      "column": "review",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Open alert: Proof review",
+          "detail": "Signed delivery proof requested for CD-420164; inspect the actual document state.",
+          "kind": "alert",
+          "sourceId": "alert-x450a8bb94b6b80c7",
+          "at": "2026-10-19T09:48:00.000Z"
+        },
+        {
+          "title": "Signed handover followup",
+          "detail": "The delivered vehicle has photos, but its signed handover record is missing.",
+          "kind": "work",
+          "sourceId": "work-xaccd8ed37a28afc8",
+          "at": "2026-10-19T11:39:00Z"
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-x450a8bb94b6b80c7",
+          "status": "OPEN",
+          "signal": "PROOF_REVIEW"
+        }
+      ],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00177",
+      "reference": "CD-420177",
+      "status": "DELIVERED",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-x065fbe8698d8355e",
+        "observedAt": "2026-10-20T10:33:00Z",
+        "receivedAt": "2026-10-20T10:36:00Z"
+      },
+      "quietExplanation": "Only conversation context or an unconfirmed inbox candidate; no independently actionable issue."
+    },
+    {
+      "id": "ord-00194",
+      "reference": "CD-420194",
+      "status": "DELIVERED",
+      "column": "review",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Open alert: Invoice reference query",
+          "detail": "Review invoice reference query for CD-420194; source is a conversation, not a verified outcome.",
+          "kind": "alert",
+          "sourceId": "alert-x5e2a521421e447cb",
+          "at": "2026-10-21T06:12:00.000Z"
+        },
+        {
+          "title": "Approved proposal not yet executed",
+          "detail": "Have billing compare the order reference with the actual invoice record.",
+          "kind": "proposal",
+          "sourceId": "agent-xf874ddfecf02bb68",
+          "at": "2026-10-21T08:33:00Z"
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-x5e2a521421e447cb",
+          "status": "OPEN",
+          "signal": "INVOICE_REFERENCE_QUERY"
+        }
+      ],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00201",
+      "reference": "CD-420201",
+      "status": "WAITING_FOR_PICKUP",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00222",
+      "reference": "CD-420222",
+      "status": "NEW",
+      "column": "followup",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Support inbox thread linked to this order",
+          "detail": "Document request by email · linked to one order. Exact order reference and authenticated customer account agree.",
+          "kind": "inbox",
+          "sourceId": "inbox-x0c469506e2c5b685",
+          "at": "2026-10-21T08:01:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00240",
+      "reference": "CD-420240",
+      "status": "IN_TRANSIT",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-x149067262729eb58",
+        "observedAt": "2026-10-21T08:45:00Z",
+        "receivedAt": "2026-10-21T08:46:00Z"
+      },
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00257",
+      "reference": "CD-420257",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00291",
+      "reference": "CD-420291",
+      "status": "DELIVERED",
+      "column": "followup",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Support inbox thread linked to this order",
+          "detail": "Expense payout by app chat · linked to one order. Driver identity, German parking, service date and amount match one approved expense on a completed assignment; approval is not proof of payout.",
+          "kind": "inbox",
+          "sourceId": "inbox-xa3da181b78fb1235",
+          "at": "2026-10-21T08:24:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00299",
+      "reference": "CD-420299",
+      "status": "WAITING_FOR_PICKUP",
+      "column": "priority",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Incident: Travel capacity",
+          "detail": "Awaiting decision",
+          "kind": "incident",
+          "sourceId": "incident-x33db4a88b8994b7b",
+          "at": "2026-10-21T07:00:00Z"
+        },
+        {
+          "title": "Agent action failed",
+          "detail": "Provider request timed out without a confirmation reference. Outcome needs reconciliation; no reservation is recorded.",
+          "kind": "proposal",
+          "sourceId": "agent-x4ac988b20000595f",
+          "at": "2026-10-21T07:10:00Z"
+        },
+        {
+          "title": "Agent proposal awaiting review",
+          "detail": "Verify the provider outcome before any retry and review the later crossing with the customer.",
+          "kind": "proposal",
+          "sourceId": "agent-xde17f642729c5339",
+          "at": "2026-10-21T08:16:00Z"
+        },
+        {
+          "title": "Owned alert: Ferry sold out",
+          "detail": "Current crossing is unavailable; alternative and customer promise need a decision. Acknowledged is not resolved.",
+          "kind": "owned_alert",
+          "sourceId": "alert-x91c0e327c701d1e7",
+          "at": "2026-10-21T08:36:00Z"
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-x91c0e327c701d1e7",
+          "status": "ACKNOWLEDGED",
+          "signal": "FERRY_SOLD_OUT"
+        }
+      ],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00311",
+      "reference": "CD-420311",
+      "status": "WAITING_FOR_PICKUP",
+      "column": "review",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Pickup details not verified for this order",
+          "detail": "Contact unconfirmed, access needs verification. Not an incident; check before the driver travels.",
+          "kind": "check",
+          "sourceId": "ep-xb5fb4a7b67662836",
+          "at": null
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00322",
+      "reference": "CD-420322",
+      "status": "IN_TRANSIT",
+      "column": "priority",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Incident: Vehicle warning",
+          "detail": "Needs a person · Red dashboard warning and reduced acceleration · recovery pending customer",
+          "kind": "incident",
+          "sourceId": "incident-x589908b2ed24936a",
+          "at": "2026-10-21T08:07:00Z"
+        },
+        {
+          "title": "Open alert: Tracking gap",
+          "detail": "No recent driver-app position; check before changing a promise.",
+          "kind": "alert",
+          "sourceId": "alert-x105238e92e7f3ba6",
+          "at": "2026-10-21T05:16:00.000Z"
+        },
+        {
+          "title": "Vehicle recovery decision",
+          "detail": "Critical vehicle warning: driver stopped safely; recovery and onward movement remain undecided.",
+          "kind": "work",
+          "sourceId": "work-xbfed2fad876cbd13",
+          "at": "2026-10-21T09:15:00Z"
+        },
+        {
+          "title": "Owned alert: Safety stop",
+          "detail": "Driver reports a red warning and has stopped safely. Diagnosis and recovery remain open. Acknowledged is not resolved.",
+          "kind": "owned_alert",
+          "sourceId": "alert-x539dcfdd5a51d9ab",
+          "at": "2026-10-21T08:34:00Z"
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-x539dcfdd5a51d9ab",
+          "status": "ACKNOWLEDGED",
+          "signal": "SAFETY_STOP"
+        },
+        {
+          "id": "alert-x105238e92e7f3ba6",
+          "status": "OPEN",
+          "signal": "TRACKING_GAP"
+        }
+      ],
+      "tracking": {
+        "sourceId": "track-x4ec652df41547497",
+        "observedAt": "2026-10-21T05:00:00Z",
+        "receivedAt": "2026-10-21T05:01:00Z"
+      },
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00324",
+      "reference": "CD-420324",
+      "status": "IN_TRANSIT",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-x660dde2870916e1d",
+        "observedAt": "2026-10-21T08:18:00Z",
+        "receivedAt": "2026-10-21T08:25:00Z"
+      },
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00326",
+      "reference": "CD-420326",
+      "status": "IN_TRANSIT",
+      "column": "followup",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Waiting on a corrected expense review",
+          "detail": "Costs and payments with Freya Marvellen",
+          "kind": "waiting",
+          "sourceId": "conv-x466f755555679452",
+          "at": "2026-10-21T11:00:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-xaffae161c6e61670",
+        "observedAt": "2026-10-21T08:01:00Z",
+        "receivedAt": "2026-10-21T08:06:00Z"
+      },
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00335",
+      "reference": "CD-420335",
+      "status": "DELIVERED",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00338",
+      "reference": "CD-420338",
+      "status": "IN_TRANSIT",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-x9ce1a6c709426854",
+        "observedAt": "2026-10-21T08:21:00Z",
+        "receivedAt": "2026-10-21T08:22:00Z"
+      },
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00342",
+      "reference": "CD-420342",
+      "status": "DELIVERED",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00347",
+      "reference": "CD-420347",
+      "status": "NEW",
+      "column": "review",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Open alert: Site access conflict",
+          "detail": "Branch and yard records disagree on where the car and keys are; stock control check pending.",
+          "kind": "alert",
+          "sourceId": "alert-xdc098cd0772eab0b",
+          "at": "2026-10-21T06:26:00.000Z"
+        },
+        {
+          "title": "Market visibility check",
+          "detail": "The pickup site cannot confirm whether this car and its keys are at the booked showroom or nearby yard; the public driver offer is still published.",
+          "kind": "work",
+          "sourceId": "work-xe272ce380e9dd375",
+          "at": "2026-10-21T09:10:00Z"
+        },
+        {
+          "title": "Waiting on site confirmation",
+          "detail": "Pickup and release",
+          "kind": "waiting",
+          "sourceId": "conv-x6a97a306c4e04153",
+          "at": "2026-10-21T12:00:00Z"
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-xdc098cd0772eab0b",
+          "status": "OPEN",
+          "signal": "SITE_ACCESS_CONFLICT"
+        }
+      ],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00360",
+      "reference": "CD-420360",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00362",
+      "reference": "CD-420362",
+      "status": "DELIVERED",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00366",
+      "reference": "CD-420366",
+      "status": "IN_TRANSIT",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-xfd1a2afc79663ac0",
+        "observedAt": "2026-10-21T08:02:00Z",
+        "receivedAt": "2026-10-21T08:05:00Z"
+      },
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00384",
+      "reference": "CD-420384",
+      "status": "WAITING_FOR_PICKUP",
+      "column": "followup",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Custody check: Keys for the second car in a two-leg driver plan",
+          "detail": "Confirm Tuesday's key holder and attended release for the second car. Monday's arrival with the first car creates a driver-positioning link, not early key custody or permission to take the second car.",
+          "kind": "custody",
+          "sourceId": "custody-x96b53a7c6cc48555",
+          "at": "2026-10-27T06:00:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00399",
+      "reference": "CD-420399",
+      "status": "WAITING_FOR_PICKUP",
+      "column": "review",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Driver start check",
+          "detail": "Accepted driver says required rest after the prior duty makes the selected next pickup unreachable.",
+          "kind": "work",
+          "sourceId": "work-x4cb7fd705c117b64",
+          "at": "2026-10-21T09:30:00Z"
+        },
+        {
+          "title": "Agent proposal awaiting review",
+          "detail": "Review a replacement driver or a customer-approved pickup change.",
+          "kind": "proposal",
+          "sourceId": "agent-xb914e837479457b7",
+          "at": "2026-10-21T08:27:00Z"
+        },
+        {
+          "title": "Pickup details not verified for this order",
+          "detail": "Contact unconfirmed, access needs verification. Not an incident; check before the driver travels.",
+          "kind": "check",
+          "sourceId": "ep-x936527910aa768c9",
+          "at": null
+        },
+        {
+          "title": "Owned alert: Positioning at risk",
+          "detail": "Assigned driver reports they cannot reach the selected Leipzig pickup after their current duty. Human review needed. Acknowledged is not resolved.",
+          "kind": "owned_alert",
+          "sourceId": "alert-x6ef8fbd869be9ac5",
+          "at": "2026-10-21T08:58:00Z"
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-x6ef8fbd869be9ac5",
+          "status": "ACKNOWLEDGED",
+          "signal": "POSITIONING_AT_RISK"
+        }
+      ],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00404",
+      "reference": "CD-420404",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00405",
+      "reference": "CD-420405",
+      "status": "WAITING_FOR_PICKUP",
+      "column": "review",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Pickup details not verified for this order",
+          "detail": "Contact unconfirmed, access confirmed. Not an incident; check before the driver travels.",
+          "kind": "check",
+          "sourceId": "ep-x2a6632ae98b35786",
+          "at": null
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00412",
+      "reference": "CD-420412",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00413",
+      "reference": "CD-420413",
+      "status": "WAITING_FOR_PICKUP",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "Only conversation context or an unconfirmed inbox candidate; no independently actionable issue."
+    },
+    {
+      "id": "ord-00419",
+      "reference": "CD-420419",
+      "status": "WAITING_FOR_PICKUP",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00437",
+      "reference": "CD-420437",
+      "status": "IN_TRANSIT",
+      "column": "priority",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Open alert: Delivery access risk",
+          "detail": "Review delivery access for CD-420437; source is a conversation, not a verified outcome.",
+          "kind": "alert",
+          "sourceId": "alert-x6fc9eee283ddbfd5",
+          "at": "2026-10-20T09:46:00.000Z"
+        },
+        {
+          "title": "Receiver authority check",
+          "detail": "The buyer corrected the address access hours, but no one has been authorized to receive and sign.",
+          "kind": "work",
+          "sourceId": "work-x6c27e55269d19e01",
+          "at": "2026-10-21T08:58:00Z"
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-x6fc9eee283ddbfd5",
+          "status": "OPEN",
+          "signal": "DELIVERY_ACCESS_RISK"
+        }
+      ],
+      "tracking": {
+        "sourceId": "track-x0e9acf00fc4d6673",
+        "observedAt": "2026-10-21T08:25:00Z",
+        "receivedAt": "2026-10-21T08:28:00Z"
+      },
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00439",
+      "reference": "CD-420439",
+      "status": "IN_TRANSIT",
+      "column": "priority",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Delivery promise needs review",
+          "detail": "driver-app ETA 26 Oct 15:43 EET is after the promise",
+          "kind": "check",
+          "sourceId": "win-x12ea353b84ae5678",
+          "at": "2026-10-26T13:00:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-x3ac752d5e1d8a25b",
+        "observedAt": "2026-10-21T08:43:00Z",
+        "receivedAt": "2026-10-21T08:46:00Z"
+      },
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00442",
+      "reference": "CD-420442",
+      "status": "WAITING_FOR_PICKUP",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00449",
+      "reference": "CD-420449",
+      "status": "WAITING_FOR_PICKUP",
+      "column": "review",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Open alert: Driver availability risk",
+          "detail": "Review illness risk for CD-420449; source is a conversation, not a verified outcome.",
+          "kind": "alert",
+          "sourceId": "alert-xd6b460da263340c0",
+          "at": "2026-10-20T10:35:00.000Z"
+        },
+        {
+          "title": "Backup driver decision",
+          "detail": "The booked driver has not confirmed fitness to take the assignment.",
+          "kind": "work",
+          "sourceId": "work-x886e3f205f976c90",
+          "at": "2026-10-20T11:21:00Z"
+        },
+        {
+          "title": "Approved proposal not yet executed",
+          "detail": "Prepare a backup without cancelling the current driver.",
+          "kind": "proposal",
+          "sourceId": "agent-xf4800bb1b907cf89",
+          "at": "2026-10-21T08:00:00Z"
+        },
+        {
+          "title": "Pickup details not verified for this order",
+          "detail": "Contact unconfirmed, access needs verification. Not an incident; check before the driver travels.",
+          "kind": "check",
+          "sourceId": "ep-x0e883fed1a5dd9b3",
+          "at": null
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-xd6b460da263340c0",
+          "status": "OPEN",
+          "signal": "DRIVER_AVAILABILITY_RISK"
+        }
+      ],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00452",
+      "reference": "CD-420452",
+      "status": "IN_TRANSIT",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-xd98596274ad6447d",
+        "observedAt": "2026-10-21T08:16:00Z",
+        "receivedAt": "2026-10-21T08:18:00Z"
+      },
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00455",
+      "reference": "CD-420455",
+      "status": "DELIVERED",
+      "column": "priority",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Incident: Post-delivery condition claim",
+          "detail": "Investigating",
+          "kind": "incident",
+          "sourceId": "incident-x9aeabfc672bd296d",
+          "at": "2026-10-21T07:32:00Z"
+        },
+        {
+          "title": "Open alert: Condition claim",
+          "detail": "Customer reports a mark after delivery; origin and timing are unverified.",
+          "kind": "alert",
+          "sourceId": "alert-xb71481bda30b3ff5",
+          "at": "2026-10-21T07:55:00.000Z"
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-xb71481bda30b3ff5",
+          "status": "OPEN",
+          "signal": "CONDITION_CLAIM"
+        }
+      ],
+      "tracking": {
+        "sourceId": "track-xeb54c34ea52f97e1",
+        "observedAt": "2026-10-21T08:33:00Z",
+        "receivedAt": "2026-10-21T08:36:00Z"
+      },
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00458",
+      "reference": "CD-420458",
+      "status": "NEW",
+      "column": "priority",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Open alert: Release document unclear",
+          "detail": "Site now reports a seller-imposed commercial hold in addition to the missing signed release; vehicle presence is not pickup authority.",
+          "kind": "alert",
+          "sourceId": "alert-xad90176c4d6e6fc5",
+          "at": "2026-10-19T11:01:00.000Z"
+        },
+        {
+          "title": "Commercial release hold",
+          "detail": "Site will refuse handover while the seller hold and missing signed authority remain.",
+          "kind": "work",
+          "sourceId": "work-x034712fe38184350",
+          "at": "2026-10-21T10:00:00Z"
+        },
+        {
+          "title": "Waiting on seller hold clearance",
+          "detail": "Pickup and release with Calverona Hamburg desk",
+          "kind": "waiting",
+          "sourceId": "conv-xb088d8b061f794e5",
+          "at": "2026-10-21T10:00:00Z"
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-xad90176c4d6e6fc5",
+          "status": "OPEN",
+          "signal": "RELEASE_DOCUMENT_UNCLEAR"
+        }
+      ],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00516",
+      "reference": "CD-420516",
+      "status": "NEW",
+      "column": "review",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Open alert: Site access unconfirmed",
+          "detail": "Site refuted both apparent pickup routes: reception has no keys and the side gate is not a release desk; stock-control callback pending.",
+          "kind": "alert",
+          "sourceId": "alert-x9dd9663e6059eeba",
+          "at": "2026-10-19T10:46:00.000Z"
+        },
+        {
+          "title": "Key holder stock check",
+          "detail": "Site cannot identify this car's key holder after refuting both saved pickup routes.",
+          "kind": "work",
+          "sourceId": "work-x2174da059fcd89e8",
+          "at": "2026-10-21T09:15:00Z"
+        },
+        {
+          "title": "Waiting on a stock control reply",
+          "detail": "Pickup and release with Velantora Helsinki desk",
+          "kind": "waiting",
+          "sourceId": "conv-x53b0830c80a6336b",
+          "at": "2026-10-21T10:00:00Z"
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-x9dd9663e6059eeba",
+          "status": "OPEN",
+          "signal": "SITE_ACCESS_UNCONFIRMED"
+        }
+      ],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00531",
+      "reference": "CD-420531",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00537",
+      "reference": "CD-420537",
+      "status": "IN_TRANSIT",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-x82466fa3936fd6c2",
+        "observedAt": "2026-10-21T08:02:00Z",
+        "receivedAt": "2026-10-21T08:04:00Z"
+      },
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00576",
+      "reference": "CD-420576",
+      "status": "IN_TRANSIT",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-x55d7a7ec6ce673f5",
+        "observedAt": "2026-10-21T08:02:00Z",
+        "receivedAt": "2026-10-21T08:04:00Z"
+      },
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00578",
+      "reference": "CD-420578",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00579",
+      "reference": "CD-420579",
+      "status": "WAITING_FOR_PICKUP",
+      "column": "review",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Pickup details not verified for this order",
+          "detail": "Contact confirmed, access needs verification (direct reply from the handoff contact). Not an incident; check before the driver travels.",
+          "kind": "check",
+          "sourceId": "ep-xedf3a2c7a0931c33",
+          "at": null
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00584",
+      "reference": "CD-420584",
+      "status": "IN_TRANSIT",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-x74f6f5191eaf7a78",
+        "observedAt": "2026-10-21T08:37:00Z",
+        "receivedAt": "2026-10-21T08:39:00Z"
+      },
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00585",
+      "reference": "CD-420585",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00593",
+      "reference": "CD-420593",
+      "status": "WAITING_FOR_PICKUP",
+      "column": "priority",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Incident: Empty pickup",
+          "detail": "Investigating",
+          "kind": "incident",
+          "sourceId": "incident-xa3273de530f17fd8",
+          "at": "2026-10-21T07:12:00Z"
+        },
+        {
+          "title": "Pickup slot needs review",
+          "detail": "slot has passed and no pickup is recorded",
+          "kind": "check",
+          "sourceId": "win-x424e4bf04450af43",
+          "at": "2026-10-21T08:00:00Z"
+        },
+        {
+          "title": "Agent proposal awaiting review",
+          "detail": "Ask the site and customer to reconcile the vehicle identity before another collection attempt.",
+          "kind": "proposal",
+          "sourceId": "agent-x6ad46f8e74398f5e",
+          "at": "2026-10-21T08:01:00Z"
+        },
+        {
+          "title": "Pickup details not verified for this order",
+          "detail": "Contact unconfirmed, access needs verification. Not an incident; check before the driver travels.",
+          "kind": "check",
+          "sourceId": "ep-xfa0577c45735dc91",
+          "at": null
+        },
+        {
+          "title": "Owned alert: Empty pickup",
+          "detail": "Driver is at the booked site; vehicle identity and release location remain unresolved. Acknowledged is not resolved.",
+          "kind": "owned_alert",
+          "sourceId": "alert-xd736bb2556e316a6",
+          "at": "2026-10-21T08:28:00Z"
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-xd736bb2556e316a6",
+          "status": "ACKNOWLEDGED",
+          "signal": "EMPTY_PICKUP"
+        }
+      ],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00603",
+      "reference": "CD-420603",
+      "status": "IN_TRANSIT",
+      "column": "priority",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Open alert: Ferry connection risk",
+          "detail": "Review ferry cutoff for CD-420603; source is a conversation, not a verified outcome.",
+          "kind": "alert",
+          "sourceId": "alert-x5259ff7f2e03f0e6",
+          "at": "2026-10-21T07:00:00.000Z"
+        },
+        {
+          "title": "Approved proposal not yet executed",
+          "detail": "Refresh vehicle-space availability and show the effect on the delivery window.",
+          "kind": "proposal",
+          "sourceId": "agent-x1c721af5508e707a",
+          "at": "2026-10-21T07:59:00Z"
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-x5259ff7f2e03f0e6",
+          "status": "OPEN",
+          "signal": "FERRY_CONNECTION_RISK"
+        }
+      ],
+      "tracking": {
+        "sourceId": "track-x3fe486c5847cfc53",
+        "observedAt": "2026-10-21T08:06:00Z",
+        "receivedAt": "2026-10-21T08:13:00Z"
+      },
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00612",
+      "reference": "CD-420612",
+      "status": "DELIVERED",
+      "column": "review",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Delivery photos: rejected",
+          "detail": "All three files show the forecourt, but none shows the delivered vehicle or receiving handover.",
+          "kind": "check",
+          "sourceId": "proof-x1a6c51d3a362f8e8",
+          "at": "2026-10-16T07:24:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00619",
+      "reference": "CD-420619",
+      "status": "IN_TRANSIT",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-xf468bba2c02701ea",
+        "observedAt": "2026-10-21T08:23:00Z",
+        "receivedAt": "2026-10-21T08:27:00Z"
+      },
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00656",
+      "reference": "CD-420656",
+      "status": "WAITING_FOR_PICKUP",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "Only conversation context or an unconfirmed inbox candidate; no independently actionable issue."
+    },
+    {
+      "id": "ord-00666",
+      "reference": "CD-420666",
+      "status": "IN_TRANSIT",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-x44c53e33a8750e78",
+        "observedAt": "2026-10-21T08:36:00Z",
+        "receivedAt": "2026-10-21T08:40:00Z"
+      },
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00671",
+      "reference": "CD-420671",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00675",
+      "reference": "CD-420675",
+      "status": "DELIVERED",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00679",
+      "reference": "CD-420679",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00689",
+      "reference": "CD-420689",
+      "status": "NEW",
+      "column": "review",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Site handover review",
+          "detail": "The Marseille site asks for separate vehicle and document releases across a booked import, live domestic offer and Friday queue.",
+          "kind": "work",
+          "sourceId": "work-x7956a83380dc9cba",
+          "at": "2026-10-21T09:20:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00692",
+      "reference": "CD-420692",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "Only conversation context or an unconfirmed inbox candidate; no independently actionable issue."
+    },
+    {
+      "id": "ord-00694",
+      "reference": "CD-420694",
+      "status": "DELIVERED",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00697",
+      "reference": "CD-420697",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00702",
+      "reference": "CD-420702",
+      "status": "IN_TRANSIT",
+      "column": "priority",
+      "newlySurfaced": false,
+      "reasons": [
+        {
+          "title": "Open alert: Delivery promise unachievable",
+          "detail": "Original customer delivery window ends today, but the next confirmed yard release window is tomorrow. No revised customer delivery promise is approved.",
+          "kind": "alert",
+          "sourceId": "alert-x9cd05869f6be7f09",
+          "at": "2026-10-21T08:28:00.000Z"
+        },
+        {
+          "title": "Yard release photos: required",
+          "detail": "Required handover evidence is missing. Check the recorded handover and obtain the specific missing evidence.",
+          "kind": "check",
+          "sourceId": "proof-xff832a775d95642d",
+          "at": null
+        }
+      ],
+      "activeAlerts": [
+        {
+          "id": "alert-x9cd05869f6be7f09",
+          "status": "OPEN",
+          "signal": "DELIVERY_PROMISE_UNACHIEVABLE"
+        }
+      ],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00710",
+      "reference": "CD-420710",
+      "status": "IN_TRANSIT",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-x56c8d69e1b8f685e",
+        "observedAt": "2026-10-21T08:19:03Z",
+        "receivedAt": "2026-10-21T08:25:03Z"
+      },
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00719",
+      "reference": "CD-420719",
+      "status": "WAITING_FOR_PICKUP",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "Only conversation context or an unconfirmed inbox candidate; no independently actionable issue."
+    },
+    {
+      "id": "ord-00725",
+      "reference": "CD-420725",
+      "status": "DELIVERED",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00735",
+      "reference": "CD-420735",
+      "status": "IN_TRANSIT",
+      "column": "review",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Moving with no driver-app position",
+          "detail": "Cole Mervalen started the leg and the app has sent no position. The promise ends 21 Oct 15:00 CEST. The record cannot say where the car is.",
+          "kind": "check",
+          "sourceId": "asg-xfda77544f42fc3fe",
+          "at": "2026-10-21T07:33:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00747",
+      "reference": "CD-420747",
+      "status": "DELIVERED",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00806",
+      "reference": "CD-420806",
+      "status": "IN_TRANSIT",
+      "column": "review",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Driver-app tracking is stale",
+          "detail": "Rafael Rillavik's last observation was 21 Oct 02:12 UTC (7 h ago); received 21 Oct 02:16 UTC. No current location is verified. Review after 4 hours without a fresh observation.",
+          "kind": "check",
+          "sourceId": "track-xf0422caacf2d28ce",
+          "at": "2026-10-21T02:12:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-xf0422caacf2d28ce",
+        "observedAt": "2026-10-21T02:12:00Z",
+        "receivedAt": "2026-10-21T02:16:00Z"
+      },
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00837",
+      "reference": "CD-420837",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00904",
+      "reference": "CD-420904",
+      "status": "DELIVERED",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00917",
+      "reference": "CD-420917",
+      "status": "IN_TRANSIT",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": {
+        "sourceId": "track-x2a1aef0443c7ca4b",
+        "observedAt": "2026-10-21T08:11:15Z",
+        "receivedAt": "2026-10-21T08:14:15Z"
+      },
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00941",
+      "reference": "CD-420941",
+      "status": "NEW",
+      "column": "followup",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Site handover review",
+          "detail": "A completed trade-in receipt shares a branch with Friday's unassigned car and Monday's booked bundle pickup.",
+          "kind": "work",
+          "sourceId": "work-xf5532facef1d865b",
+          "at": "2026-10-21T09:20:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-00958",
+      "reference": "CD-420958",
+      "status": "DELIVERED",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00961",
+      "reference": "CD-420961",
+      "status": "DELIVERED",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00987",
+      "reference": "CD-420987",
+      "status": "DELIVERED",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-00992",
+      "reference": "CD-420992",
+      "status": "WAITING_FOR_PICKUP",
+      "column": "followup",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Driver start check",
+          "detail": "One driver has an active Düsseldorf duty, a booked Frankfurt pickup tomorrow and another booking Monday; today's release is unrecorded.",
+          "kind": "work",
+          "sourceId": "work-x15f6ebbff418e44c",
+          "at": "2026-10-21T09:20:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-01010",
+      "reference": "CD-421010",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-01011",
+      "reference": "CD-421011",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-01013",
+      "reference": "CD-421013",
+      "status": "IN_TRANSIT",
+      "column": "review",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Moving with no driver-app position",
+          "detail": "Daniel Arelmont started the leg and the app has sent no position. The promise ends 21 Oct 16:00 EEST. The record cannot say where the car is.",
+          "kind": "check",
+          "sourceId": "asg-x7d7212e3bd4bbecb",
+          "at": "2026-10-21T04:55:00Z"
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-01022",
+      "reference": "CD-421022",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-01024",
+      "reference": "CD-421024",
+      "status": "WAITING_FOR_PICKUP",
+      "column": "review",
+      "newlySurfaced": true,
+      "reasons": [
+        {
+          "title": "Pickup details not verified for this order",
+          "detail": "Contact unconfirmed, access confirmed. Not an incident; check before the driver travels.",
+          "kind": "check",
+          "sourceId": "ep-xe62573e92ddbb1c4",
+          "at": null
+        }
+      ],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": null
+    },
+    {
+      "id": "ord-01027",
+      "reference": "CD-421027",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-01035",
+      "reference": "CD-421035",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-01038",
+      "reference": "CD-421038",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-01042",
+      "reference": "CD-421042",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-01044",
+      "reference": "CD-421044",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-01048",
+      "reference": "CD-421048",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-01051",
+      "reference": "CD-421051",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-01053",
+      "reference": "CD-421053",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    },
+    {
+      "id": "ord-01056",
+      "reference": "CD-421056",
+      "status": "NEW",
+      "column": null,
+      "newlySurfaced": false,
+      "reasons": [],
+      "activeAlerts": [],
+      "tracking": null,
+      "quietExplanation": "No active alert, blocked work, outstanding check or stale/missing active-trip evidence."
+    }
+  ]
+}

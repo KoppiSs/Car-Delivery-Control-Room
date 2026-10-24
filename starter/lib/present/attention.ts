@@ -83,9 +83,29 @@ export function chosenWindows(bundle: Bundle): Windows {
 
 export type Tracking = { eta: string | null; observedAt: string | null; receivedAt: string | null; quality: string | null; source: string | null; remainingKm: number | null; progress: number | null; note: string | null }
 
+// Prototype review policy, measured at the dataset snapshot, not wall-clock time.
+export const TRACKING_REVIEW_AFTER_HOURS = 4
+
+function trackingForAssignment(row: Record<string, unknown>, assignment: Record<string, unknown>): boolean {
+  if (row.assignment_id) return row.assignment_id === assignment.id
+  return strings(assignment.segment_ids).includes(String(row.segment_id))
+}
+
+function availableTracking(bundle: Bundle) {
+  const snapshot = Date.parse(bundle.snapshotAt ?? "")
+  return rows(bundle, "tracking_observations").filter(({ details }) => {
+    const observed = Date.parse(String(details.observed_at ?? ""))
+    const received = Date.parse(String(details.received_at ?? ""))
+    return Number.isFinite(observed) && Number.isFinite(received) && received >= observed
+      && (!Number.isFinite(snapshot) || (observed <= snapshot && received <= snapshot))
+  })
+}
+
 export function latestTracking(bundle: Bundle): { direct: Tracking | null; inference: Tracking | null } {
-  const observations = rows(bundle, "tracking_observations")
+  const active = rows(bundle, "work_assignments").filter((row) => row.details.status === "IN_PROGRESS")
+  const observations = availableTracking(bundle)
     .map((row) => row.details)
+    .filter((row) => !active.length || active.some((assignment) => trackingForAssignment(row, assignment.details)))
     .sort((a, b) => String(b.observed_at ?? "").localeCompare(String(a.observed_at ?? "")))
   const read = (row: Record<string, unknown> | undefined): Tracking | null => row ? {
     eta: str(row.estimated_delivery_at), observedAt: str(row.observed_at), receivedAt: str(row.received_at),
@@ -250,6 +270,20 @@ export function deriveAttention(bundle: Bundle): AttentionItem[] {
     })
   }
 
+  // Rejected evidence and missing required evidence after its handover need a
+  // person even when the selected alert history contains no matching alert.
+  const proofCovered = bundle.alerts.some((alert) => ["OPEN", "ACKNOWLEDGED"].includes(alert.status) && /PROOF|DOCUMENT/.test(alert.signal))
+  if (!proofCovered) for (const collection of ["proofs", "documents"]) for (const row of rows(bundle, collection)) {
+    const status = str(row.details.status)
+    if (!bool(row.details.required) || !["REJECTED", "REQUIRED", "MISSING"].includes(status ?? "")) continue
+    const pointId = str(row.details.point_id)
+    const handover = pointId && bundle.events.some((event) => event.targetId === pointId && ["vehicle.picked_up", "vehicle.delivered"].includes(event.command))
+    if (status !== "REJECTED" && !handover) continue
+    items.push({ kind: "check", tone: "warn", title: `${label(str(row.details.kind))}: ${labelIn(status)}`,
+      short: `${label(str(row.details.kind))} needs review`, detail: str(row.details.review_note) ?? "Required handover evidence is missing. Check the recorded handover and obtain the specific missing evidence.",
+      owner: null, at: str(row.details.reviewed_at) ?? str(row.details.updated_at), atLabel: "reviewed", section: "evidence", recordId: row.id })
+  }
+
   for (const row of rows(bundle, "endpoint_claims")) {
     if (str(row.details.resolution_status) !== "OPEN") continue
     items.push({
@@ -282,8 +316,9 @@ export function deriveAttention(bundle: Bundle): AttentionItem[] {
     const owner = dir.title(thread.details.owner)
     if (waitingOn) {
       const nextCheck = str(thread.details.next_check_at)
+      const overdue = !!(nextCheck && snapshotAt && isBefore(nextCheck, snapshotAt))
       items.push({
-        kind: "waiting", tone: "neutral", title: `Waiting on ${labelIn(waitingOn)}`, short: `Waiting on ${labelIn(waitingOn)}${owner ? ` · ${owner}` : ""}`,
+        kind: "waiting", tone: overdue ? "warn" : "neutral", title: `Waiting on ${labelIn(waitingOn)}`, short: `Waiting on ${labelIn(waitingOn)}${owner ? ` · ${owner}` : ""}`,
         detail: `${label(thread.category)}${withWhom}`, owner,
         at: nextCheck ?? thread.updatedAt, atLabel: nextCheck ? "next check" : "last message", section: "conversations", recordId: thread.id,
       })
@@ -300,7 +335,7 @@ export function deriveAttention(bundle: Bundle): AttentionItem[] {
     const next = str(row.details.next_action)
     if (!next) continue
     items.push({
-      kind: "custody", tone: "neutral", title: `Custody check: ${str(row.details.label) ?? label(str(row.details.kind))}`, short: `Custody check${dir.title(row.details.followup_owner) ? ` · ${dir.title(row.details.followup_owner)}` : ""}`,
+      kind: "custody", tone: snapshotAt && str(row.details.followup_due_at) && isBefore(str(row.details.followup_due_at), snapshotAt) ? "warn" : "neutral", title: `Custody check: ${str(row.details.label) ?? label(str(row.details.kind))}`, short: `Custody check${dir.title(row.details.followup_owner) ? ` · ${dir.title(row.details.followup_owner)}` : ""}`,
       detail: next, owner: dir.title(row.details.followup_owner), at: str(row.details.followup_due_at), atLabel: "due",
       section: "evidence", recordId: row.id,
     })
@@ -324,24 +359,42 @@ export function deriveAttention(bundle: Bundle): AttentionItem[] {
     }
   }
 
-  if (lane === "moving") {
-    // A car on the road with a driver in progress, no driver-app position and a
-    // promise still open is a gap in the record, not an incident. An open or
-    // owned tracking or promise alert already covers the same gap.
-    const active = rows(bundle, "work_assignments").find((row) => str(row.details.status) === "IN_PROGRESS")
-    const positioned = rows(bundle, "tracking_observations").some((row) => str(row.details.source) === "driver_app")
+  if (lane === "moving" && !["DELIVERED", "CANCELLED"].includes(bundle.order.status.toUpperCase())) {
+    // Missing or stale evidence for the current leg calls for a check, not a
+    // claim about the driver's physical position. Existing alerts own their gap.
+    const active = rows(bundle, "work_assignments").filter((row) => str(row.details.status) === "IN_PROGRESS")
     const promise = chosenWindows(bundle).promise
     const promiseOpen = !!(promise?.end && snapshotAt && !isBefore(promise.end, snapshotAt))
     const covered = bundle.alerts.some((alert) =>
       (alert.status === "OPEN" || alert.status === "ACKNOWLEDGED") && (alert.signal.includes("TRACKING") || alert.signal.includes("DELIVERY_PROMISE")))
-    if (active && !positioned && promise && promiseOpen && !covered) {
-      const driver = dir.driverName(active.details.driver_id)
+    for (const assignment of active) {
+      if (covered) break
+      const latest = availableTracking(bundle).filter((row) => row.details.source === "driver_app" && trackingForAssignment(row.details, assignment.details))
+        .sort((a, b) => String(b.details.observed_at).localeCompare(String(a.details.observed_at)))[0]
+      const observed = str(latest?.details.observed_at)
+      const stale = latest && (latest.details.location_quality === "STALE" || !!(snapshotAt && observed
+        && Date.parse(snapshotAt) - Date.parse(observed) >= TRACKING_REVIEW_AFTER_HOURS * 3_600_000))
+      if (latest && !stale) continue
+      const driver = dir.driverName(assignment.details.driver_id)
       items.push({
-        kind: "check", tone: "warn", title: "Moving with no driver-app position", short: "Moving, no driver-app position",
-        detail: `${driver ?? "The driver"} started the leg and the app has sent no position. The promise ends ${fmtDateTime(promise.end, promise.zone)}. The record cannot say where the car is.`,
-        owner: null, at: promise.end, atLabel: "promise ends", section: "journey", recordId: active.id,
+        kind: "check", tone: "warn", title: latest ? "Driver-app tracking is stale" : "Moving with no driver-app position",
+        short: latest ? "A fresh driver update is needed" : "Moving, no driver-app position",
+        detail: latest ? `${driver ?? "The driver"}'s last observation was ${fmtDateTime(observed)} (${relativeTo(observed, snapshotAt)?.text ?? "time unknown"}); received ${fmtDateTime(str(latest.details.received_at))}. No current location is verified. Review after ${TRACKING_REVIEW_AFTER_HOURS} hours without a fresh observation.`
+          : `${driver ?? "The driver"} started the leg and the app has sent no position.${promise && promiseOpen ? ` The promise ends ${fmtDateTime(promise.end, promise.zone)}.` : ""} The record cannot say where the car is.`,
+        owner: null, at: observed ?? str(assignment.details.started_at), atLabel: latest ? "last observed" : "leg started", section: "journey", recordId: latest?.id ?? assignment.id,
       })
     }
+  }
+
+  for (const date of deriveKeyDates(bundle).keyDates) {
+    if (!["promise", "pickup_slot"].includes(date.key) || !["warn", "danger"].includes(date.tone)) continue
+    if (bundle.alerts.some((alert) => ["OPEN", "ACKNOWLEDGED"].includes(alert.status)
+      && (date.key === "promise" ? /DELIVERY_PROMISE/.test(alert.signal) : /PICKUP_SLOT|POSITIONING/.test(alert.signal)))) continue
+    const source = rows(bundle, "time_windows").find((row) => row.details.is_selected === true && row.details.start_at === date.start)
+    if (!source) continue
+    items.push({ kind: "check", tone: date.tone, title: date.key === "promise" ? "Delivery promise needs review" : "Pickup slot needs review",
+      short: date.key === "promise" ? "Delivery timing needs review" : "Pickup timing needs review", detail: date.note,
+      owner: null, at: date.end ?? date.start, atLabel: "window ends", section: "journey", recordId: source.id })
   }
 
   for (const thread of bundle.inboxThreads) {
@@ -350,6 +403,7 @@ export function deriveAttention(bundle: Bundle): AttentionItem[] {
     if (confirmed && str(thread.details.status) !== "OPEN") continue
     items.push({
       kind: "inbox", tone: "neutral",
+      requiresReview: confirmed && str(thread.details.status) === "OPEN",
       title: confirmed ? `Support inbox thread linked to this order` : "Unlinked support message may concern this order",
       short: confirmed ? "Open support inbox thread" : "Unlinked support message may belong here",
       detail: `${label(str(thread.details.category))} by ${label(str(thread.details.channel)).toLowerCase()} · ${labelIn(state)}${str(thread.details.candidate_basis) ? `. ${str(thread.details.candidate_basis)}` : ""}`,

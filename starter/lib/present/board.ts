@@ -3,6 +3,7 @@ import { type Bundle, isBeforeSnapshot, num, rows, str, strings } from "./bundle
 import { label } from "./labels"
 import { fmtDateTime, fmtMoney, relativeTo } from "./time"
 import type { AttentionKind, BoardCard, WorkLine } from "./types"
+import { reviewReasons } from "./review"
 
 const ICONS: Record<AttentionKind, WorkLine["icon"]> = {
   alert: "alert", owned_alert: "alert", work: "work", incident: "incident", waiting: "waiting", conversation: "waiting",
@@ -30,6 +31,7 @@ export function buildBoardCard(bundle: Bundle): BoardCard {
     return status === "ACKNOWLEDGED" ? 2 : ["high", "critical"].includes(alert.severity) ? 0 : 1
   }
   const problem = [...problemAlerts].sort((a, b) => rank(a) - rank(b) || a.triggeredAt.localeCompare(b.triggeredAt))[0]
+  const reason = reviewReasons({ attention })[0]
 
   const work: WorkLine[] = []
   const first = attention[0]
@@ -72,11 +74,12 @@ export function buildBoardCard(bundle: Bundle): BoardCard {
 
   return {
     id: order.id,
+    isBlocked: order.status.toUpperCase() === "BLOCKED" || order.details.readiness_status === "BLOCKED",
     agentMode: order.agentMode,
     agentDecision: order.agentDecision,
     waitingOnDescription: order.waitingOnDescription,
-    problemTitle: problem ? label(problem.signal) : "This order is blocked",
-    problemDetail: problem?.summary ?? "Review the order and confirm what is needed before work can continue.",
+    problemTitle: problem ? label(problem.signal) : reason?.title ?? "This order is blocked",
+    problemDetail: problem?.summary ?? reason?.detail ?? "Review the order and confirm what is needed before work can continue.",
     problemSeverity: problem?.severity,
     reference: order.reference,
     displayLane: order.lane,

@@ -3,6 +3,7 @@ import { buildBoardCard } from "@/lib/present/board"
 import { LANE_ORDER } from "@/lib/present/labels"
 import { loadBoardBundles } from "@/lib/present/load"
 import type { BoardCard, Overview, Tone } from "@/lib/present/types"
+import { needsControlRoomReview } from "@/lib/present/review"
 
 export const runtime = "nodejs"
 
@@ -25,7 +26,7 @@ function laneSort(lane: string) {
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get("q")?.trim().toLowerCase() ?? ""
   const { snapshotAt, bundles } = await loadBoardBundles({ exceptionsOnly: true })
-  const all = bundles.map(buildBoardCard)
+  const all = bundles.map(buildBoardCard).filter(needsControlRoomReview)
   const counts = Object.fromEntries(LANE_ORDER.map((lane) => [lane, all.filter((card) => card.displayLane === lane).length]))
   const attentionCounts = Object.fromEntries(LANE_ORDER.map((lane) => [lane, all.filter((card) => card.displayLane === lane && card.attention.length > 0).length]))
   const matches = query ? all.filter((card) => [

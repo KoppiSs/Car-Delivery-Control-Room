@@ -20,7 +20,7 @@ const iso = (value: Date | string | null | undefined): string => value instanceo
 export const BOARD_COLLECTIONS = [
   "time_windows", "tracking_observations", "work_assignments", "market_offers", "work_items", "agent_proposals",
   "order_endpoint_details", "transport_points", "transport_segments", "incidents", "endpoint_claims", "custody_assets",
-  "market_offer_exposures", "custody_reports",
+  "market_offer_exposures", "custody_reports", "transport_plans", "proofs", "documents",
 ]
 
 const SHARED_COLLECTIONS = ["operators", "agents", "support_inbox_threads"]
@@ -131,7 +131,7 @@ export function makeBundle(input: {
   }
 }
 
-/** Entity pages can read all orders; the Control Room selects exceptions in SQL. */
+/** SQL selects potential exceptions; the shared evidence policy removes quiet candidates. */
 export async function loadBoardBundles({ exceptionsOnly = false }: { exceptionsOnly?: boolean } = {}): Promise<{ snapshotAt: string | null; bundles: Bundle[] }> {
   const shared = await loadShared()
   const dir = shared.makeDirectory()
@@ -139,10 +139,28 @@ export async function loadBoardBundles({ exceptionsOnly = false }: { exceptionsO
     db.select().from(orders).where(exceptionsOnly ? sql`(
       exists (select 1 from ${alerts} where ${alerts.orderId} = ${orders.id}
         and ${alerts.status} in ('OPEN', 'ACKNOWLEDGED'))
-      or (${orders.agentMode} != 'MANUAL_COMPLETE' and (${orders.status} = 'BLOCKED'
+      or (${orders.agentMode} != 'MANUAL_COMPLETE' and (upper(${orders.status}) = 'BLOCKED'
         or ${orders.details} ->> 'readiness_status' = 'BLOCKED'))
       or ${orders.agentMode} = 'MANUAL'
-      or ${orders.status} = 'follow_up'
+      or upper(${orders.status}) = 'FOLLOW_UP'
+      or (${orders.agentMode} != 'MANUAL_COMPLETE' and (
+        ${orders.agentDecision} in ('APPROVED', 'REJECTED')
+        or ${orders.displayLane} in ('moving', 'booked', 'ready', 'market')
+        or exists (select 1 from ${relatedRecords} where ${relatedRecords.orderId} = ${orders.id} and (
+          (${relatedRecords.collection} = 'work_items' and ${relatedRecords.details} ->> 'status' in ('OPEN', 'NEEDS_EXTERNAL_INPUT', 'IN_PROGRESS', 'WAITING'))
+          or (${relatedRecords.collection} = 'incidents' and ${relatedRecords.details} ->> 'resolved_at' is null)
+          or (${relatedRecords.collection} = 'endpoint_claims' and ${relatedRecords.details} ->> 'resolution_status' = 'OPEN')
+          or (${relatedRecords.collection} = 'agent_proposals' and ${relatedRecords.details} ->> 'status' in ('PENDING_REVIEW', 'APPROVED_AWAITING_EXECUTION', 'FAILED'))
+          or (${relatedRecords.collection} = 'custody_assets' and nullif(${relatedRecords.details} ->> 'next_action', '') is not null)
+          or (${relatedRecords.collection} in ('proofs', 'documents') and ${relatedRecords.details} ->> 'status' in ('REJECTED', 'REQUIRED', 'MISSING'))
+        ))
+        or exists (select 1 from ${conversations} where ${conversations.status} = 'OPEN'
+          and nullif(${conversations.details} ->> 'waiting_on', '') is not null
+          and (${conversations.orderId} = ${orders.id} or ${conversations.details} -> 'related_order_ids' @> jsonb_build_array(${orders.id})))
+        or exists (select 1 from ${relatedRecords} where ${relatedRecords.collection} = 'support_inbox_threads'
+          and ${relatedRecords.details} ->> 'status' = 'OPEN'
+          and ${relatedRecords.details} -> 'linked_order_ids' @> jsonb_build_array(${orders.id}))
+      ))
     )` : undefined).orderBy(desc(orders.updatedAt), asc(orders.reference)),
     db.select({ item: orderItems, vehicle: vehicles }).from(orderItems).innerJoin(vehicles, eq(orderItems.vehicleId, vehicles.id)),
     db.select().from(alerts),

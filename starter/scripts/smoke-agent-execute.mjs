@@ -24,7 +24,7 @@ try {
       from orders order by id limit 1`
     for (const [index, status] of ["OPEN", "ACKNOWLEDGED", "RESOLVED"].entries()) {
       await tx`insert into alerts (id, order_id, severity, signal, status, summary, triggered_at, details)
-        values (${alertIds[index]}, ${orderId}, 'medium', 'TRACKING_GAP', ${status}, 'Fictional test alert', now(),
+        values (${alertIds[index]}, ${orderId}, ${index === 0 ? 'high' : 'medium'}, 'TRACKING_GAP', ${status}, 'Fictional test alert', now(),
         ${tx.json({ status, evidence_refs: ["test-evidence"], marker: "preserve-history" })})`
     }
   })
@@ -89,6 +89,7 @@ try {
   const card = overview.visible.find((order) => order.id === orderId)
   assert.ok(card, 'Follow-up must remain visible even after all alerts are cleared')
   assert.equal(reviewType(card), 'followup')
+  assert.equal(card.problemSeverity, 'high', 'Original severity is retained as context while Follow-up ownership determines placement')
   assert.equal(card.waitingOnDescription, proposal.waiting_on_description)
   assert.equal(card.problemTitle, beforeCard.problemTitle)
   assert.equal((await fetch(base + '/api/agent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId, events: [] }) })).status, 409)

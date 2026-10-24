@@ -265,15 +265,46 @@ The same Compose file starts a local S3-compatible attachment store. `attachment
 - `GET /api/reference-data`: shared fictional terminals, road estimate ranges and operations actors that are not tied to a single order.
 - `GET /api/orders/:id/attachments`: metadata for the order's fictional PDFs and photos, with short-lived read-only URLs from the local attachment store.
 
-The Control Room includes orders with active alerts or blocked work, plus open
-manual follow-ups. Priority review contains high-priority open alerts; Needs review
-contains other open questions; Follow-up contains owned alerts and approved or
-rejected plans; Manual control contains orders taken over by operations. Each
-order appears in exactly one column. Search by reference, plate, customer, vehicle
+The Control Room assesses stored alerts and evidence-backed work. SQL selects
+potential exceptions, then `needsControlRoomReview` applies the same policy used
+to audit All Deliveries. This includes unresolved incidents/claims, unfinished
+work, pickup verification, required evidence rejected or missing after handover,
+threatened selected timing windows, pending/failed proposals, custody checks,
+owned waits, and confirmed open inbox work. An open conversation or unconfirmed
+inbox candidate alone stays informational.
+
+Active trips need review when driver-app evidence is missing or at least four
+hours old (`TRACKING_REVIEW_AFTER_HOURS`), or explicitly marked stale. This is a
+prototype staffing rule, not a claim that the source packet specifies a policy.
+Age uses `observed_at` at `snapshot_at`; a late upload of old evidence cannot
+refresh it. Only observations from the active assignment/leg, received by the
+snapshot, count. Fresh coarse/unverified signals alone stay quiet. Inferences
+never replace direct evidence, and completed trips do not acquire new tracking
+alerts from their historical observations.
+
+Priority review contains high-priority open alerts and urgent evidence risks;
+Needs review contains outstanding decisions and overdue checks. Follow-up
+contains owned future checks, expected replies and reviewed plans. Manual control
+contains work taken over by operations. Explicit Follow-up or Manual ownership
+takes precedence over the old problem severity. Card badges and column placement
+both use `reviewType`, so an owned Follow-up cannot also show a Priority review
+badge. Completed manual work stays closed unless a new active alert is present.
+Each order appears in exactly one column. Search by reference, plate, customer, vehicle
 or city. Clicking a card opens a drawer; the full record is also available at
 `/orders/:id`. Ownership changes never replace the underlying problem title.
 
-The attention signal is derived from open alerts, unresolved incidents, open work items, open conversations, pending or failed agent proposals, unresolved endpoint claims, custody follow-ups, support inbox threads that name the order, and a moving car whose driver has started the leg while the app has sent no position and the delivery promise is still open. A conversation filed on one order and related to another counts for both, on the board and on the record. A quiet card means those records are empty, not that the order is verified safe. `display_lane` and the derived signal are reading aids for this starter, not operational truth.
+`node scripts/audit-control-room.mjs` checks all current orders, including board/detail
+evidence parity, SQL inclusion, unique placement and raw tracking/proof/work risks.
+It writes an order-by-order assessment to `reports/control-room-audit.md` and `.json`.
+The restored 100-order snapshot has 40 actionable orders (23 previously hidden)
+and 60 quiet orders under this policy. These are derived review signals; the
+source files and recorded alert histories are not rewritten. Run
+`node scripts/test-review-policy.mjs` for boundary and false-positive checks.
+
+A conversation filed on one order and related to another remains visible as
+context on both the board and detail. A quiet card means there is no actionable
+evidence under this review policy, not that the order is verified safe.
+`display_lane` and derived signals are reading aids, not operational truth.
 The order record is deliberately short. It opens with the model illustration, the car, a few facts as chips, one sentence of context and one headline about the situation ("Cole Mervalen collects it tomorrow.", "Running late to Hamburg.", "Still being prepared."). When the attention list holds a danger or warn item, the detail line ends with the first of them as "Open: ...". A danger item also gives the headline that tone. Then "Needs a person", four tiles (pickup, delivery, driver, fee or ETA), the route as stops with a leg between them, conversations with the last message, evidence as chips and a strip of sample files, prior agent work and the latest activity. When nothing is waiting, the panel says "Nothing in the records is waiting on a person." and names which records were checked and which were not. "Prior agent work" lists proposals already on the order with their recorded review. A team's own agent and the human decision on its proposals belong there. Everything else is folded under "Everything on this order": route details, alerts and work, drivers, the driver market, travel, costs, proofs and documents, prior agent work with room activity, and the full history. The page shows the shape of the data; the API and those folds hold the depth. Names of customers, drivers and sites link to their own pages, and order references link to the order. "Not supplied" is an unknown input, not a failed pickup. Labels come from `lib/present/labels.ts`; the raw codes stay in the API.
 Open, acknowledged, resolved and dismissed alerts remain distinct in the order view. An acknowledged alert still appears on the board with its owner; it is not treated as resolved. A dismissed alert retains the stale or invalid source and the evidence for dismissing it.
 The order detail also shows selected sample photos and PDF links when the order has bundled files. The signed links expire after 15 minutes; reload the page to refresh them. Booked travel is shown separately from options. For a moving car, the first-view ETA comes from the last direct driver-app observation; a later schedule inference is labelled separately. Tracking records in this packet have no map coordinates, so the starter does not draw a live position.
