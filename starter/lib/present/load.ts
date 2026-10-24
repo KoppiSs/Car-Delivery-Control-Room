@@ -21,6 +21,7 @@ export const BOARD_COLLECTIONS = [
   "time_windows", "tracking_observations", "work_assignments", "market_offers", "work_items", "agent_proposals",
   "order_endpoint_details", "transport_points", "transport_segments", "incidents", "endpoint_claims", "custody_assets",
   "market_offer_exposures", "custody_reports", "transport_plans", "proofs", "documents",
+  "travel_options", "travel_reservations", "ferry_terminal_events",
 ]
 
 const SHARED_COLLECTIONS = ["operators", "agents", "support_inbox_threads"]
@@ -135,7 +136,7 @@ export function makeBundle(input: {
 export async function loadBoardBundles({ exceptionsOnly = false }: { exceptionsOnly?: boolean } = {}): Promise<{ snapshotAt: string | null; bundles: Bundle[] }> {
   const shared = await loadShared()
   const dir = shared.makeDirectory()
-  const [orderRows, itemRows, alertRows, threadRows, relatedRows, eventRows] = await Promise.all([
+  const [orderRows, itemRows, alertRows, threadRows, relatedRows, eventRows, messageRows] = await Promise.all([
     db.select().from(orders).where(exceptionsOnly ? sql`(
       exists (select 1 from ${alerts} where ${alerts.orderId} = ${orders.id}
         and ${alerts.status} in ('OPEN', 'ACKNOWLEDGED'))
@@ -166,7 +167,10 @@ export async function loadBoardBundles({ exceptionsOnly = false }: { exceptionsO
     db.select().from(alerts),
     db.select().from(conversations),
     db.select().from(relatedRecords).where(inArray(relatedRecords.collection, BOARD_COLLECTIONS)),
-    db.select().from(operationalEvents).where(inArray(operationalEvents.command, ["vehicle.picked_up", "vehicle.delivered"])),
+    db.select().from(operationalEvents).where(inArray(operationalEvents.command, [
+      "vehicle.picked_up", "vehicle.delivered", "expense.submitted", "travel.check_in_confirmed",
+    ])),
+    db.select().from(messages).orderBy(asc(messages.authoredAt)),
   ])
   const group = <T extends { orderId: string | null }>(items: T[]) => {
     const map = new Map<string, T[]>()
@@ -195,6 +199,12 @@ export async function loadBoardBundles({ exceptionsOnly = false }: { exceptionsO
   }
   for (const list of threadsByOrder.values()) list.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
   const eventsByOrder = group(eventRows)
+  const messagesByThread = new Map<string, (typeof messages.$inferSelect)[]>()
+  for (const message of messageRows) {
+    const list = messagesByThread.get(message.conversationId) ?? []
+    list.push(message)
+    messagesByThread.set(message.conversationId, list)
+  }
   const relatedByOrder = new Map<string, Record<string, RelatedRow[]>>()
   for (const row of relatedRows) {
     if (!row.orderId) continue
@@ -208,7 +218,7 @@ export async function loadBoardBundles({ exceptionsOnly = false }: { exceptionsO
     items: (itemsByOrder.get(order.id) ?? []).map((entry) => entry.row),
     alerts: alertsByOrder.get(order.id) ?? [],
     conversations: threadsByOrder.get(order.id) ?? [],
-    messages: [],
+    messages: (threadsByOrder.get(order.id) ?? []).flatMap((thread) => messagesByThread.get(thread.id) ?? []),
     events: eventsByOrder.get(order.id) ?? [],
     related: relatedByOrder.get(order.id) ?? {},
     bundleOrderRefs: {},
