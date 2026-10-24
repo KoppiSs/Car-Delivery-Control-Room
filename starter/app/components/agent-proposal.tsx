@@ -160,7 +160,7 @@ export function AgentProposalCard({ detail, onUpdate, onHoveredEventIdsChange }:
       </> : !loading && <><p>Ask the agent to review this order’s history and suggest the next step.</p>
         <div className="agent-actions"><button type="button" className="agent-primary" onClick={() => void generate()}>Generate proposal</button><button type="button" className="agent-secondary" disabled={manualBusy} onClick={() => void manualUpdate("takeover")}>Take Over</button></div>
         <p className="agent-approval-note">Generation starts only when you choose.</p></>}
-      {loading && <div className="agent-loading-message" role="status"><p>{lastCorrection ? "Revising the plan with your correction…" : "Investigating the order history…"}</p><p className="agent-approval-note">This can take up to three minutes. You can close this order; the completed proposal will be saved.</p></div>}
+      {loading && <div className="agent-loading-message" role="status"><p>{lastCorrection ? "Revising the plan with your correction…" : "Investigating the order history…"}</p><p className="agent-approval-note">Reviewing the latest evidence. You can close this order; the completed proposal will be saved.</p></div>}
     </>}
   </section>
 }

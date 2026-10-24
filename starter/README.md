@@ -30,8 +30,11 @@ order ID, selected event history, active attention items and alert context to
 `POST /api/agent`. The route first reads `orders.agent_proposal`. A non-null
 value is returned immediately without calling Ollama. Otherwise it calls local Ollama at
 `http://127.0.0.1:11434/api/generate` with a strict JSON schema in `format` and
-`stream: false`. The schema enforces five required keys: the summary array, proposed action, button
-text, executable tool call, and waiting-on description, with no extra properties. Generation uses temperature zero and
+`stream: false`. Ollama generates a compact, closed schema containing findings,
+the executable tool call and the waiting description. The app copies the tool's
+description into `proposed_action` and supplies the fixed `Approve follow-up`
+button label, preserving the full five-field API/storage contract without asking
+the model to generate duplicate text. Generation uses temperature zero and
 allows one retry for incomplete or invalid output within the same 180-second
 deadline. Complete, validated JSON is accepted even when Ollama reports a token
 limit finish; incomplete JSON is never cached. The batch script uses the same
@@ -44,7 +47,7 @@ connection failures appear in the card with a retry button.
 
 The request body is `{ "orderId": "ord-00593", "events": [{ "id": "event-id", "command": "…" }], "context": {} }`.
 `context` is optional. Successful responses contain exactly
-`investigation_summary` (an array of strings), `proposed_action` (a string),
+`investigation_summary` (an array of findings with text and source event IDs), `proposed_action` (a string),
 `decision_button_text` (a string), `executable_tool_call` (an action object), and
 `waiting_on_description` (the specific external event expected next). The server validates this contract before
 returning and saving a proposal in the order's nullable JSONB `agent_proposal`
@@ -62,6 +65,23 @@ The server bounds generation and response parsing to 180 seconds; the browser
 also bounds the complete request to 195 seconds, so a stalled connection or body
 always leaves the loading state with a retry message. Valid cached proposals in
 the order detail render immediately without another agent request.
+
+For CPU inference, prompts contain a short system instruction, selected current
+issues, and at most six compact operational events within a 1,400-character
+history budget. Review-feedback events are excluded from factual evidence. Source
+and time remain attached, and omitted/truncated evidence is explicitly marked.
+The schema is sent only in `format`, not repeated inside the system prompt. Model
+context is 2,048 tokens, with 320 output tokens initially and a 448-token,
+one-finding repair attempt. `keep_alive: "30m"` avoids repeated model cold starts.
+Cache, manual ownership, approval rules, citations and mock execution are preserved.
+
+`node scripts/benchmark-agent.mjs` measures generation without modifying orders.
+It reports prompt/output token counts, time and proposal validity. Set
+`AGENT_BENCHMARK_ORDER_ID` to measure a different case. On this local CPU, an
+uncached relay-order test completed with a valid proposal in 46 seconds using
+743 prompt tokens; earlier Ollama logs showed about 170 seconds for roughly
+3,000 prompt tokens and 271 output tokens. These are observed local timings,
+not a response-time guarantee.
 
 New investigation findings use `{ "text": "Finding", "source_event_ids": ["event-id"] }`.
 Ollama's schema restricts those IDs to supplied order events, and the server

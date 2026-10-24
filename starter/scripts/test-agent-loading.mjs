@@ -5,7 +5,7 @@ const asModule = (source) => 'data:text/javascript;base64,' + Buffer.from(stripT
 const contractUrl = asModule(await readFile(new URL('../lib/agent.ts', import.meta.url), 'utf8'))
 const requestSource = (await readFile(new URL('../lib/agent-request.ts', import.meta.url), 'utf8')).replace('"./agent"', JSON.stringify(contractUrl))
 const { fetchAgentProposal } = await import(asModule(requestSource))
-const { buildAgentPrompt } = await import(contractUrl)
+const { buildAgentPrompt, buildAgentGenerationRequest, parseAgentOutput } = await import(contractUrl)
 const proposal = { investigation_summary: ['Fictional evidence.'], proposed_action: 'Review with an operator.', decision_button_text: 'Approve review' }
 const options = (fetchImpl) => ({ signal: new AbortController().signal, timeoutMs: 20, fetchImpl })
 await assert.rejects(fetchAgentProposal({}, options(() => new Promise(() => {}))), /took too long/)
@@ -26,3 +26,17 @@ assert.ok(selected.omitted_event_count > 0)
 assert.equal(selected.context.truncated, true)
 assert.ok(selected.events.some((event) => event.id === 'ev-99'))
 console.log('Verified proposal loading: stalled fetch and stalled body deadlines, cancellation, error display, valid proposals, and bounded evidence prompts.')
+const request = buildAgentGenerationRequest(events, { evidence: 'b'.repeat(20_000) }, 'llama3.2')
+assert.ok(request.system.length + request.prompt.length < 4000, 'Default generation must use a small CPU-sized prompt')
+assert.equal(request.options.num_ctx, 2048)
+assert.equal(request.options.num_predict, 320)
+assert.equal(request.keep_alive, '30m')
+assert.ok(!request.system.includes('Output JSON schema:'), 'Do not repeat the response schema in model input')
+const wire = { investigation_summary: [{ text: 'Selected evidence needs review.', source_event_ids: [] }],
+  executable_tool_call: { action_type: 'REQUEST_OPERATOR_REVIEW', payload: { description: 'Review the selected evidence.' } },
+  waiting_on_description: 'Waiting for the operator to confirm the next step.' }
+const expanded = parseAgentOutput({ response: JSON.stringify(wire) }, [])
+assert.equal(expanded.proposed_action, wire.executable_tool_call.payload.description)
+assert.equal(expanded.decision_button_text, 'Approve follow-up')
+assert.equal(parseAgentOutput({ response: JSON.stringify({ ...wire, executable_tool_call: {} }) }, []), null)
+console.log('Verified compact generation, prompt/output budgets, warm model settings, and full proposal reconstruction without invented plan fields.')
