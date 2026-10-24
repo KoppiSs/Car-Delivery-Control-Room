@@ -34,7 +34,7 @@ const routeSource = (await readFile(new URL("../app/api/agent/route.ts", import.
   .replace('"@/lib/agent-store"', JSON.stringify(storeUrl))
   .replace('"@/lib/agent-jobs"', JSON.stringify(jobsUrl))
 const { POST } = await import(asModule(routeSource))
-const { isAgentProposal, parseAgentOutput, isExternalWaitingDescription } = await import(contractUrl)
+const { isAgentProposal, parseAgentOutput, isExternalWaitingDescription, isWaitingAlignedWithAction, buildAgentGenerationRequest } = await import(contractUrl)
 const proposal = {
   ...executableFields,
   investigation_summary: [{ text: "A missed check-in is recorded; no replacement booking is evidenced.", source_event_ids: [] }],
@@ -201,6 +201,26 @@ try {
   assert.deepEqual(await repaired.json(), revised)
   assert.equal(revisionAttempts, 2, 'An echoed edit instruction must be repaired before saving')
   assert.equal(state.cached.waiting_on_description, revised.waiting_on_description)
+  const identity = { ...proposal, proposed_action: 'Request the vehicle VIN or registration from the customer.',
+    executable_tool_call: { action_type: 'REQUEST_VEHICLE_IDENTITY', payload: { description: 'Request the vehicle VIN or registration from the customer.' } },
+    waiting_on_description: 'Customer-provided VIN or registration.' }
+  const copiedExample = { ...identity, waiting_on_description: 'Signed delivery proof from the receiving site' }
+  assert.equal(isWaitingAlignedWithAction(copiedExample), false)
+  assert.equal(parseAgentOutput({ response: JSON.stringify(copiedExample) }), null)
+  assert.equal(isWaitingAlignedWithAction({ ...identity, waiting_on_description: 'Current ferry capacity confirmation.' }), false)
+  assert.equal(isWaitingAlignedWithAction({ ...identity, proposed_action: 'Request signed delivery proof.', executable_tool_call: {
+    action_type: 'REQUEST_HANDOVER_PROOF', payload: { description: 'Request signed delivery proof.' },
+  }, waiting_on_description: copiedExample.waiting_on_description }), true, 'The same wording can be valid for a proof action')
+  assert.ok(!buildAgentGenerationRequest([], {}, 'test').system.includes(copiedExample.waiting_on_description), 'Prompt must not prime every order with a default waiting event')
+  const cleanEvidence = buildAgentGenerationRequest([{ id: 'mock', command: 'agent.follow_up_started', details: { changes: { waiting_on_description: 'COPIED_WAITING_SENTINEL' } } }], {}, 'test')
+  assert.ok(!cleanEvidence.prompt.includes('COPIED_WAITING_SENTINEL'), 'A historical mock waiting event is not independent operational evidence')
+  state.cached = null
+  let coherenceAttempts = 0
+  globalThis.fetch = async () => Response.json({ response: JSON.stringify(++coherenceAttempts === 1 ? copiedExample : identity) })
+  const coherent = await POST(request({ events: [] }))
+  assert.equal(coherent.status, 200)
+  assert.deepEqual(await coherent.json(), identity)
+  assert.equal(coherenceAttempts, 2, 'An unrelated waiting event must be repaired before caching')
   state.mode = "MANUAL"
   assert.equal((await POST(request({ events: [] }))).status, 409, "Manual orders must not regenerate proposals")
   console.log("Verified agent route: cache, persistence, validation, drawer cancellation, duplicate generation, busy handling, stalled-body timeout, truncation, and retries.")

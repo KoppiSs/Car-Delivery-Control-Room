@@ -32,4 +32,11 @@ const feedback = [
 const html = renderToStaticMarkup(React.createElement(DecisionsSection, { view: { proposals: [] }, feedback }))
 for (const text of ['Prior agent work 4', 'Proposal approved', 'Proposal rejected', 'Manual control taken over', 'Check trains instead of ferries', 'Compare ferry options.', 'Compare train options.', '2026-10-24T10:00:00Z']) assert.ok(html.includes(text), 'Missing history detail: ' + text)
 assert.ok(!html.includes('No agent work has been reviewed'))
+const corrected = renderToStaticMarkup(React.createElement(DecisionsSection, { view: { proposals: [] }, feedback: [{
+  id: 'repair', decision: 'CORRECT_WAITING', outcome: 'CORRECTED', operatorId: 'system', createdAt: '2026-10-24T10:00:00Z',
+  correction: 'Removed an unrelated waiting event.', previousProposal: { ...previousProposal, waiting_on_description: 'Signed handover proof.' },
+  replacementProposal: { ...previousProposal, waiting_on_description: 'Current ferry capacity confirmation.' },
+}] }))
+for (const text of ['Follow-up waiting event corrected', 'Corrected', 'Previous waiting event:', 'Signed handover proof.', 'Current ferry capacity confirmation.']) assert.ok(corrected.includes(text))
+assert.ok(!corrected.includes('Rejected'))
 console.log('Verified Prior agent work renders approvals, rejections, takeovers, corrections, reviewed/revised plans, and timestamps.')

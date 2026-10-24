@@ -124,6 +124,21 @@ gets one bounded repair attempt. Approval also checks saved override feedback
 before writing a mock action, so a cached instruction echo cannot become a
 Follow-up waiting state.
 
+Waiting events must also match the executable action. The prompt has no canned
+waiting example or default; clear domain mismatches (such as handover proof for
+a vehicle-identity request) are rejected during generation and approval. The
+check permits the same wording on orders that legitimately await the same type
+of response. Mock follow-up/review events are excluded from factual generation
+evidence, and the drawer discards details or refresh responses for another order.
+`node scripts/smoke-followup-isolation.mjs` checks independent identity, travel
+and proof caches, concurrent approvals, saved records and reopened views.
+
+`node scripts/repair-followup-waiting.mjs` is an idempotent, narrowly guarded repair
+for the two confirmed copies of the former prompt example (CD-420009 and
+CD-420154). It checks the original action and source work before correcting the
+order and mock-action waiting text. Original approvals remain intact; an event
+and **Prior agent work** correction preserve the old and corrected waiting values.
+
 The Follow-up column explicitly includes `follow_up` orders even when no active
 alert remains. Each card prominently shows **Waiting on** and the saved
 `waiting_on_description`; the original problem title remains visible. The drawer

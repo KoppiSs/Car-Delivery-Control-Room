@@ -13,6 +13,7 @@ export function OrderDrawer({ order, onDismiss, readOnly = false }: {
   const [detail, setDetail] = useState<Detail | null>(null)
   const [error, setError] = useState("")
   const [attempt, setAttempt] = useState(0)
+  const loadedDetail = detail?.order.id === order.id ? detail : null
 
 
   useEffect(() => {
@@ -28,12 +29,16 @@ export function OrderDrawer({ order, onDismiss, readOnly = false }: {
 
   useEffect(() => {
     const controller = new AbortController()
+    setError("")
     fetch(`/api/orders/${encodeURIComponent(order.id)}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error(response.status === 404 ? "This order could not be found." : "This order couldn't be loaded. Please try again.")
         return response.json() as Promise<Detail>
       })
-      .then((data) => { if (!controller.signal.aborted) setDetail(data) })
+      .then((data) => {
+        if (data.order.id !== order.id) throw new Error("The loaded details do not match this order. Please try again.")
+        if (!controller.signal.aborted) setDetail(data)
+      })
       .catch((cause: unknown) => {
         if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "This order couldn't be loaded.")
       })
@@ -55,10 +60,10 @@ export function OrderDrawer({ order, onDismiss, readOnly = false }: {
         <button type="button" className="order-drawer-close" onClick={onDismiss} aria-label="Close order review" autoFocus>×</button>
       </div>
     </header>
-    <div className="order-drawer-content" aria-busy={!detail && !error}>
+    <div className="order-drawer-content" aria-busy={!loadedDetail && !error}>
       {error ? <div className="control-empty" role="alert"><h3>Unable to open order</h3><p>{error}</p>
         <button type="button" onClick={() => { setError(""); setAttempt((value) => value + 1) }}>Try again</button>
-      </div> : detail ? <OrderPane detail={detail} readOnly={readOnly} /> : <div className="order-drawer-loading" role="status"><div className="control-placeholder" /><p>Loading order…</p></div>}
+      </div> : loadedDetail ? <OrderPane key={loadedDetail.order.id} detail={loadedDetail} readOnly={readOnly} /> : <div className="order-drawer-loading" role="status"><div className="control-placeholder" /><p>Loading order…</p></div>}
     </div>
   </dialog>
 }

@@ -38,8 +38,8 @@ export function AgentProposalCard({ detail, onUpdate }: {
     setWaitingOn(detail.order.waitingOnDescription ?? "")
     setDecision(detail.order.agentDecision ?? "PENDING")
     setDecisionAt(detail.order.agentDecisionAt ?? null)
-    if (isAgentProposal(detail.order.agentProposal)) setProposal(detail.order.agentProposal)
-  }, [detail.order.agentProposal, detail.order.agentMode, detail.order.agentDecision, detail.order.agentDecisionAt, detail.order.status, detail.order.waitingOnDescription])
+    setProposal(isAgentProposal(detail.order.agentProposal) ? detail.order.agentProposal : null)
+  }, [detail.order.id, detail.order.agentProposal, detail.order.agentMode, detail.order.agentDecision, detail.order.agentDecisionAt, detail.order.status, detail.order.waitingOnDescription])
 
   async function generate(steer?: string) {
     if (request.current || mode !== "AGENT" || followUp) return
@@ -139,7 +139,7 @@ export function AgentProposalCard({ detail, onUpdate }: {
           <button type="button" className="agent-secondary" disabled={decision === "REJECTED" || loading || manualBusy} onClick={() => void reviewDecision("REJECTED")}>{decision === "REJECTED" ? "Rejected" : "Reject Proposal"}</button>
           <button type="button" className="agent-secondary" disabled={loading || manualBusy} onClick={() => { setEditing(true); setProposalError("") }}>Edit Proposal</button>
           <button type="button" className="agent-secondary" disabled={manualBusy} onClick={() => void manualUpdate("takeover")}>Take Over</button></div>
-        {!isExecutableAgentProposal(proposal) && <div className="agent-legacy-note"><p>This saved plan needs an executable follow-up action before it can be approved.</p><button type="button" className="agent-secondary" disabled={loading || manualBusy} onClick={() => void generate("Keep the intent of this plan, and add an executable mock follow-up action and the specific external event to wait for.")}>Prepare follow-up</button></div>}
+        {!isExecutableAgentProposal(proposal) && <div className="agent-legacy-note"><p>This saved plan needs a matching follow-up action and expected response before it can be approved.</p><button type="button" className="agent-secondary" disabled={loading || manualBusy} onClick={() => void generate("Keep the intended next step. Prepare an executable mock action and the specific reply or evidence that action requests; do not reuse an unrelated waiting event.")}>Prepare follow-up</button></div>}
         {isExecutableAgentProposal(proposal) && <p className="agent-approval-note"><b>After approval:</b> {proposal.waiting_on_description}</p>}
         {editing && <form className="agent-edit-form" onSubmit={(event) => { event.preventDefault(); if (correction.trim()) void generate(correction.trim()) }}>
           <label htmlFor="proposal-correction">What should the agent do differently?</label>

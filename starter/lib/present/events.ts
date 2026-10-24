@@ -193,6 +193,10 @@ export function describeEvent(event: EventRow, bundle: Bundle): HistoryEvent {
       text = "Simulated resolution recorded"
       detail = str(changes.resolution_reason)
       break
+    case "agent.follow_up_waiting_corrected":
+      text = "Follow-up waiting event corrected"
+      detail = `Previously: ${str(changes.previous_waiting_on_description) ?? "not recorded"}. Now waiting on: ${str(changes.waiting_on_description) ?? "not recorded"}.`
+      break
     case "agent.follow_up_started":
       text = "Mock follow-up action recorded"
       detail = str(changes.waiting_on_description)

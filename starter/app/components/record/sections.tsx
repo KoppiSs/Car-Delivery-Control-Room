@@ -180,14 +180,16 @@ export function DecisionsSection({ view, feedback = [] }: { view: RecordView; fe
     {proposals.length === 0 && feedback.length === 0 && <Empty>No agent work has been reviewed on this order yet.</Empty>}
     <div className="rows">{feedback.map((entry) => {
       const takeover = entry.decision === "TAKEOVER" || entry.outcome === "MANUAL_TAKEOVER"
-      const title = takeover ? "Manual control taken over" : entry.outcome === "MOCK_EXECUTED" ? "Follow-up action approved" : entry.decision === "APPROVE" ? "Proposal approved" : entry.decision === "REJECT" ? "Proposal rejected" : "Proposal edited"
-      const outcome = entry.decision === "OVERRIDE" ? ({ REQUESTED: "Revision requested", APPLIED: "Revised plan ready", FAILED: "Revision failed; original retained", SUPERSEDED: "Superseded by a later decision" }[entry.outcome] ?? entry.outcome) : takeover ? "Taken over" : entry.outcome === "MOCK_EXECUTED" ? "Mock action recorded" : entry.decision === "APPROVE" ? "Approved" : "Rejected"
+      const corrected = entry.decision === "CORRECT_WAITING"
+      const title = corrected ? "Follow-up waiting event corrected" : takeover ? "Manual control taken over" : entry.outcome === "MOCK_EXECUTED" ? "Follow-up action approved" : entry.decision === "APPROVE" ? "Proposal approved" : entry.decision === "REJECT" ? "Proposal rejected" : "Proposal edited"
+      const outcome = corrected ? "Corrected" : entry.decision === "OVERRIDE" ? ({ REQUESTED: "Revision requested", APPLIED: "Revised plan ready", FAILED: "Revision failed; original retained", SUPERSEDED: "Superseded by a later decision" }[entry.outcome] ?? entry.outcome) : takeover ? "Taken over" : entry.outcome === "MOCK_EXECUTED" ? "Mock action recorded" : entry.decision === "APPROVE" ? "Approved" : "Rejected"
       return <article className="row agent-feedback-row" key={entry.id}>
-        <div className="row-main"><div className="row-title">{title} <Chip tone={entry.decision === "APPROVE" ? "ok" : takeover ? "neutral" : "warn"}>{outcome}</Chip></div>
+        <div className="row-main"><div className="row-title">{title} <Chip tone={entry.decision === "APPROVE" ? "ok" : takeover || corrected ? "neutral" : "warn"}>{outcome}</Chip></div>
           <p className="row-sub">{entry.operatorId === "operator" ? "Operator" : entry.operatorId}</p>
           {entry.correction && <p className="row-preview">{entry.correction}</p>}
-          {entry.previousProposal && <p className="agent-history-action"><b>Reviewed plan:</b> {entry.previousProposal.proposed_action}</p>}
-          {entry.replacementProposal && <p className="agent-history-action"><b>Revised plan:</b> {entry.replacementProposal.proposed_action}</p>}
+          {entry.previousProposal && <p className="agent-history-action"><b>{corrected ? "Approved action:" : "Reviewed plan:"}</b> {entry.previousProposal.proposed_action}</p>}
+          {entry.replacementProposal && !corrected && <p className="agent-history-action"><b>Revised plan:</b> {entry.replacementProposal.proposed_action}</p>}
+          {corrected && <><p className="agent-history-action"><b>Previous waiting event:</b> {entry.previousProposal?.waiting_on_description}</p><p className="agent-history-action"><b>Waiting on:</b> {entry.replacementProposal?.waiting_on_description}</p></>}
           {entry.outcome === "MOCK_EXECUTED" && entry.previousProposal?.waiting_on_description && <p className="agent-history-action"><b>Waiting on:</b> {entry.previousProposal.waiting_on_description}</p>}
         </div><div className="row-side"><When at={entry.createdAt} withZone={false} /></div>
       </article>

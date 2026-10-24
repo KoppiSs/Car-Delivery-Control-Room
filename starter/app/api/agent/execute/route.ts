@@ -1,5 +1,5 @@
 ﻿import { executeMockResolution } from "@/lib/agent-execute"
-import { isAgentProposal, isExecutableToolCall, isExternalWaitingDescription } from "@/lib/agent"
+import { isAgentProposal, isExecutableToolCall, isExternalWaitingDescription, isWaitingAlignedWithAction } from "@/lib/agent"
 import { AgentReviewConflict } from "@/lib/agent-store"
 
 export const runtime = "nodejs"
@@ -28,6 +28,9 @@ export async function POST(request: Request) {
   }
   if (!isExternalWaitingDescription(waiting)) {
     return Response.json({ error: "Waiting on must name an external reply, document or confirmation. Revise the proposal before approving." }, { status: 400 })
+  }
+  if (isAgentProposal(body.proposal) && !isWaitingAlignedWithAction(body.proposal)) {
+    return Response.json({ error: "The waiting event does not match the proposed action. Edit the proposal before approving." }, { status: 400 })
   }
   try {
     const result = await executeMockResolution(body.orderId, action, waiting, isAgentProposal(body.proposal) ? body.proposal : undefined)

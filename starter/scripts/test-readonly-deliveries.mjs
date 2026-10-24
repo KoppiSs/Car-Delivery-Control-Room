@@ -57,6 +57,10 @@ assert.ok(drawer.includes('Recorded evidence.'))
 assert.ok(!drawer.includes('Open full page'))
 assert.ok(!drawer.includes('Generate proposal'))
 assert.equal(agentMounts, 1, 'Drawer must pass read-only mode through to its loaded pane')
+const changedOrder = renderToStaticMarkup(React.createElement(OrderDrawer, { order: { id: 'another-order', reference: 'ANOTHER' }, readOnly: true, onDismiss() {} }))
+assert.ok(changedOrder.includes('ANOTHER'))
+assert.ok(!changedOrder.includes('Recorded evidence.'), 'A previously loaded order must not render under another order reference')
+assert.ok(changedOrder.includes('Loading order'))
 const { groupDeliveries } = await load('../lib/present/deliveries.ts', { './labels': require('../lib/present/labels.ts') })
 const cards = ['DELIVERED', 'follow_up', 'NEW', 'IN_TRANSIT', 'WAITING_FOR_PICKUP', 'CANCELLED', 'BLOCKED', 'FUTURE_STATE', 'NEW'].map((status, index) => ({
   id: `delivery-${index}`, reference: `REF-${index}`, status, statusLabel: status, displayLane: 'moving',
