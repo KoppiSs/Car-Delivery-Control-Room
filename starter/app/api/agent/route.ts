@@ -43,6 +43,7 @@ export async function POST(request: Request) {
     let revision = review?.agentRevision ?? 0
     let feedbackId: string | undefined
     let previousAction = ""
+    let previousWaitingOn: string | undefined
     if (correction && isAgentProposal(body.previousProposal)) {
       try {
         const override = await beginAgentOverride(orderId, correction, body.previousProposal)
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
         revision = override.revision
         feedbackId = override.feedbackId
         previousAction = override.previous.proposed_action
+        previousWaitingOn = override.previous.waiting_on_description
       } catch (error) {
         return { status: error instanceof AgentReviewConflict ? 409 : 500,
           body: { error: error instanceof AgentReviewConflict ? error.message : "Could not record the correction. Please retry." } }
@@ -73,11 +75,11 @@ export async function POST(request: Request) {
             // A drawer closing must not discard work another review can reuse.
             signal: controller.signal,
             body: JSON.stringify(buildAgentGenerationRequest(body.events as unknown[], body.context ?? null,
-              process.env.OLLAMA_MODEL || "llama3.2", attempt, correction ? { correction, previousAction } : undefined)),
+              process.env.OLLAMA_MODEL || "llama3.2", attempt, correction ? { correction, previousAction, previousWaitingOn } : undefined)),
           })
           if (!response.ok) return { status: 503, body: { error: "The local model is unavailable. Check that OLLAMA_MODEL names an installed model." } }
           const output = await response.json()
-          proposal = parseAgentOutput(output, (body.events as Record<string, unknown>[]).flatMap((event) => typeof event.id === "string" ? [event.id] : []))
+          proposal = parseAgentOutput(output, (body.events as Record<string, unknown>[]).flatMap((event) => typeof event.id === "string" ? [event.id] : []), correction)
           if (proposal) break
           if (attempt === 1) return { status: 502, body: { error: "The agent couldn't prepare a complete proposal. Please retry the investigation." } }
         }

@@ -89,12 +89,19 @@ validates citations before saving them. Context-only findings use an empty array
 Saved plain-text summaries remain readable; generating or revising a plan adds
 the new source links without guessing citations for historical text.
 
-The order detail owns `hoveredEventIds`. Hovering or focusing a linked finding
-highlights its matching entries in Activity and All events with `bg-yellow-50`.
-Cited events outside the six-event Activity preview are temporarily revealed in
-their existing chronological position. Leaving or blurring the finding clears
-the highlight. `node scripts/test-evidence-hover.mjs` checks both timelines and
-preview behavior; the proposal card test checks mouse and keyboard source IDs.
+Investigation summaries render as plain bullet lists. Source IDs remain saved
+with findings, without hover or focus highlighting in either timeline.
+
+**All Deliveries** (`/deliveries`) is a separate navigation view backed by the
+read-only `GET /api/deliveries` route. It includes all orders and statuses, with
+search across references, vehicles, customers, routes and status labels. The
+state sections have separate headings, counts and dividers, using the actual
+order status (including Follow-up) rather than the display lane. Its
+detail drawer shows delivery facts, saved investigations, waiting descriptions,
+evidence and history. It never mounts the interactive agent card or offers a link
+to the editable order page. Control Room retains its exception-only queue and
+operator controls. `node scripts/test-readonly-deliveries.mjs` checks this boundary;
+`node scripts/smoke-control-room.ts` checks both views against current database state.
 
 For an existing database, run `npm run db:push` to add the column without reseeding.
 The equivalent additive SQL is in `migrations/0001_agent_proposal.sql`.
@@ -109,6 +116,13 @@ the active alert episodes, clears `orders.agent_proposal`, and sets
 `orders.waiting_on_description`. No real message, booking or external tool call is
 performed. The drawer calls `router.refresh()` and refreshes its client-loaded
 order/queue data, showing the saved waiting state immediately.
+
+Edit instructions stay in review feedback. The model receives the previous
+external dependency when revising a plan. Generation rejects descriptions that
+echo the operator's instruction or refer to editing/regenerating the plan, and
+gets one bounded repair attempt. Approval also checks saved override feedback
+before writing a mock action, so a cached instruction echo cannot become a
+Follow-up waiting state.
 
 The Follow-up column explicitly includes `follow_up` orders even when no active
 alert remains. Each card prominently shows **Waiting on** and the saved

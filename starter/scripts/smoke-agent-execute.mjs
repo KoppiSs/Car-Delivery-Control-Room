@@ -29,7 +29,8 @@ try {
     }
   })
   for (const invalid of [null, {}, { orderId, action: {} }, { orderId, ...executableFields, waiting_on_description: '' },
-    { ...body, executable_tool_call: { action_type: 'REQUEST_DRIVER_UPDATE', payload: 'bad' } }]) {
+    { ...body, executable_tool_call: { action_type: 'REQUEST_DRIVER_UPDATE', payload: 'bad' } },
+    { ...body, waiting_on_description: 'Revise this entirely again.' }]) {
     assert.equal((await post(invalid)).status, 400)
   }
   assert.equal((await post({ orderId, action: { text: "a".repeat(50_001) } })).status, 413)
@@ -41,6 +42,18 @@ try {
   assert.equal(unchanged.status, 'BLOCKED')
   const before = await sql`select id, status, details from alerts where id = ${alertIds[2]}`
   const beforeCard = (await (await fetch(base + '/api/overview')).json()).visible.find((order) => order.id === orderId)
+  const correction = 'Prioritise the rail option'
+  const badProposal = { ...proposal, waiting_on_description: correction }
+  await sql`update orders set agent_proposal = ${sql.json(badProposal)} where id = ${orderId}`
+  await sql`insert into agent_proposal_feedback (id, order_id, decision, correction, previous_proposal, replacement_proposal, outcome)
+    values (${orderId + '-override'}, ${orderId}, 'OVERRIDE', ${correction}, ${sql.json(proposal)}, ${sql.json(badProposal)}, 'APPLIED')`
+  const badApproval = await post({ ...body, proposal: badProposal, waiting_on_description: correction })
+  assert.equal(badApproval.status, 409, await badApproval.text())
+  const [blocked] = await sql`select status from orders where id = ${orderId}`
+  assert.equal(blocked.status, 'BLOCKED', 'An instruction echo must never move an order to Follow-up')
+  assert.equal((await sql`select * from agent_mock_actions where order_id = ${orderId}`).length, 0)
+  await sql`update orders set agent_proposal = ${sql.json(proposal)} where id = ${orderId}`
+  await sql`delete from agent_proposal_feedback where id = ${orderId + '-override'}`
   const responses = await Promise.all([post(body), post(body)])
   const results = []
   for (const response of responses) { const data = await response.json(); assert.equal(response.status, 200, JSON.stringify(data)); results.push(data) }

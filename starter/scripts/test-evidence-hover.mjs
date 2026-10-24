@@ -22,17 +22,13 @@ new Function('require', 'module', 'exports', code)(dependencies, loaded, loaded.
 const { ActivitySection, HistoryDays } = loaded.exports
 const events = Array.from({ length: 8 }, (_, i) => ({ id: `evt-${i}`, at: '2026-10-24T10:00:00Z', text: `Event ${i}`, detail: null, actor: null, shared: false }))
 const view = { history: [{ key: 'day', label: 'Today', events }], historyTotal: events.length }
-const render = (Component, ids = []) => renderToStaticMarkup(React.createElement(Component, { view, hoveredEventIds: ids }))
+const render = (Component) => renderToStaticMarkup(React.createElement(Component, { view }))
 const idle = render(ActivitySection)
 assert.ok(!idle.includes('bg-yellow-50'))
 assert.ok(!idle.includes('data-event-id="evt-7"'))
-for (const Component of [ActivitySection, HistoryDays]) {
-  const highlighted = render(Component, ['evt-1', 'evt-7'])
-  assert.equal((highlighted.match(/class="event bg-yellow-50"/g) ?? []).length, 2)
-  assert.ok(highlighted.includes('class="event bg-yellow-50" data-event-id="evt-1"'))
-  assert.ok(highlighted.includes('class="event bg-yellow-50" data-event-id="evt-7"'))
-  assert.ok(highlighted.includes('class="event" data-event-id="evt-0"'))
-  assert.ok(!render(Component).includes('bg-yellow-50'), 'Clearing hover must clear every highlight')
-  assert.ok(!render(Component, ['unknown-event']).includes('bg-yellow-50'))
-}
-console.log('Verified timeline evidence highlighting in Activity and All events, older cited event visibility, unrelated events, and clearing hover.')
+const history = render(HistoryDays)
+assert.ok(history.includes('class="event" data-event-id="evt-7"'))
+assert.equal((idle.match(/class="event"/g) ?? []).length, 6)
+assert.equal((history.match(/class="event"/g) ?? []).length, 8)
+assert.ok(!history.includes('bg-yellow-50'))
+console.log('Verified plain timeline events and the six-event Activity preview after removing evidence highlighting.')

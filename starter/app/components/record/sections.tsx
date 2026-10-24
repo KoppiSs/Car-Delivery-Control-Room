@@ -239,14 +239,14 @@ export function ProposalCards({ view }: { view: RecordView }) {
 
 /* ── Activity ───────────────────────────────────────────────────────────── */
 
-export function ActivitySection({ view, hoveredEventIds = [] }: { view: RecordView; hoveredEventIds?: string[] }) {
+export function ActivitySection({ view }: { view: RecordView }) {
   const [all, setAll] = useState(false)
   const events = view.history.flatMap((day) => day.events)
-  const shown = all ? events : events.filter((event, index) => index < 6 || hoveredEventIds.includes(event.id))
+  const shown = all ? events : events.slice(0, 6)
   return <section className="sec" id="history">
     <SectionHead title="Activity" count={view.historyTotal} />
     {events.length === 0 && <Empty>No events recorded.</Empty>}
-    <div className="events">{shown.map((event) => <div className={`event${hoveredEventIds.includes(event.id) ? " bg-yellow-50" : ""}`} key={event.id} data-event-id={event.id}>
+    <div className="events">{shown.map((event) => <div className="event" key={event.id} data-event-id={event.id}>
       <time dateTime={event.at} title={fmtDateTime(event.at)}>{fmtDay(event.at)} {fmtClock(event.at)}</time>
       <div className="event-text"><b>{event.text}</b>{event.actor && <span className="actor"> · {event.actor}</span>}{event.shared && <span className="actor"> · shared bundle</span>}{all && event.detail && <small>{event.detail}</small>}</div>
     </div>)}</div>
@@ -370,10 +370,10 @@ export function EvidenceDetails({ view }: { view: RecordView }) {
   </div>
 }
 
-export function HistoryDays({ view, hoveredEventIds = [] }: { view: RecordView; hoveredEventIds?: string[] }) {
+export function HistoryDays({ view }: { view: RecordView }) {
   return <div>{view.history.map((day) => <div className="history-day" key={day.key}>
     <h3>{day.label}</h3>
-    {day.events.map((event) => <div className={`event${hoveredEventIds.includes(event.id) ? " bg-yellow-50" : ""}`} key={event.id} data-event-id={event.id}>
+    {day.events.map((event) => <div className="event" key={event.id} data-event-id={event.id}>
       <time dateTime={event.at} title={fmtDateTime(event.at)}>{fmtClock(event.at)}</time>
       <div className="event-text"><b>{event.text}</b>{event.actor && <span className="actor"> · {event.actor}</span>}{event.shared && <span className="actor"> · shared bundle</span>}{event.detail && <small>{event.detail}</small>}</div>
     </div>)}

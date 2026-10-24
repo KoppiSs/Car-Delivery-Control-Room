@@ -15,14 +15,13 @@ const { code } = transformSync(source, { filename: 'agent-proposal.tsx', jsc: {
 let effects = []
 let buttons = []
 const findings = []
-const hovered = []
 let calls = 0
 let refreshes = 0
 let finish
 const proposal = { ...executableFields, investigation_summary: [{ text: 'Evidence gathered.', source_event_ids: ['evt-source-1', 'evt-source-2'] }], proposed_action: 'Operator review.', decision_button_text: 'Approve follow-up' }
 const captureJsx = (fn) => (...args) => {
   if (args[0] === 'button') buttons.push(args[1])
-  if (args[0] === 'li' && args[1].className === 'investigation-finding') findings.push(args[1])
+  if (args[0] === 'li') findings.push(args[1])
   return fn(...args)
 }
 const dependencies = (name) => {
@@ -57,22 +56,17 @@ await pending
 for (const cleanup of cleanups) cleanup()
 effects = []
 buttons = []
-const cached = renderToStaticMarkup(React.createElement(AgentProposalCard, { detail: { ...detail, order: { ...detail.order, agentProposal: proposal } }, onHoveredEventIdsChange: (ids) => hovered.push(ids) }))
+const cached = renderToStaticMarkup(React.createElement(AgentProposalCard, { detail: { ...detail, order: { ...detail.order, agentProposal: proposal } } }))
 for (const effect of effects) effect()
 assert.ok(cached.includes('Evidence gathered.'))
 assert.ok(!cached.includes('Generate proposal'))
 assert.ok(cached.includes('Edit Proposal'))
 assert.ok(cached.includes('Take Over'))
 const finding = findings[0]
-assert.equal(finding.tabIndex, 0)
-finding.onMouseEnter()
-assert.deepEqual(hovered.at(-1), ['evt-source-1', 'evt-source-2'])
-finding.onMouseLeave()
-assert.deepEqual(hovered.at(-1), [])
-finding.onFocus()
-assert.deepEqual(hovered.at(-1), ['evt-source-1', 'evt-source-2'])
-finding.onBlur()
-assert.deepEqual(hovered.at(-1), [])
+assert.equal(finding.children, 'Evidence gathered.')
+assert.equal(finding.tabIndex, undefined)
+assert.equal(finding.onMouseEnter, undefined)
+assert.equal(finding.onFocus, undefined)
 const approveButton = buttons.find((button) => button.children === 'Approve follow-up')
 assert.equal(approveButton.disabled, false)
 const nativeFetch = globalThis.fetch

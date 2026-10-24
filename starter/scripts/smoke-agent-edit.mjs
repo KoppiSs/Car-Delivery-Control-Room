@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import postgres from 'postgres'
 import { createRequire } from 'node:module'
-const { isExecutableAgentProposal } = createRequire(import.meta.url)('../lib/agent.ts')
+const { isExecutableAgentProposal, isExternalWaitingDescription } = createRequire(import.meta.url)('../lib/agent.ts')
 const sql = postgres(process.env.DATABASE_URL, { max: 1 })
 const base = process.env.APP_URL ?? 'http://localhost:3000'
 const orderId = `test-edit-${randomUUID()}`
@@ -28,6 +28,7 @@ try {
   const proposal = await response.json()
   assert.equal(response.status, 200, JSON.stringify(proposal))
   assert.ok(isExecutableAgentProposal(proposal), 'Ollama must return an executable tool call and waiting description')
+  assert.ok(isExternalWaitingDescription(proposal.waiting_on_description, correction), 'Waiting on must describe an external dependency, never echo the edit instruction')
   assert.ok(proposal.investigation_summary.every((finding) => typeof finding === 'object' && Array.isArray(finding.source_event_ids)))
   assert.ok(proposal.investigation_summary.some((finding) => finding.source_event_ids.includes(eventId)), 'The direct quote evidence should be cited')
   assert.match(JSON.stringify(proposal), /train|rail/i)

@@ -2,7 +2,7 @@
 import { and, desc, eq, inArray } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { agentMockActions, agentProposalFeedback, alerts, operationalEvents, orders } from "@/lib/schema"
-import { isExecutableAgentProposal, type ExecutableToolCall, type AgentProposal } from "./agent"
+import { isExecutableAgentProposal, isExternalWaitingDescription, type ExecutableToolCall, type AgentProposal } from "./agent"
 import { AgentReviewConflict, sameJson, sameProposal } from "./agent-store"
 
 export async function executeMockResolution(orderId: string, action: ExecutableToolCall, waitingOnDescription: string, expected?: AgentProposal) {
@@ -25,6 +25,13 @@ export async function executeMockResolution(orderId: string, action: ExecutableT
     if (!sameJson(proposal.executable_tool_call, action) || proposal.waiting_on_description !== waitingOnDescription
       || (expected && !sameProposal(proposal, expected))) {
       throw new AgentReviewConflict("This proposal has changed. Reopen the order before approving it.")
+    }
+    const [override] = await tx.select().from(agentProposalFeedback).where(and(eq(agentProposalFeedback.orderId, orderId),
+      eq(agentProposalFeedback.decision, "OVERRIDE"), eq(agentProposalFeedback.outcome, "APPLIED")))
+      .orderBy(desc(agentProposalFeedback.createdAt)).limit(1)
+    if (!isExternalWaitingDescription(waitingOnDescription, override?.replacementProposal
+      && sameProposal(proposal, override.replacementProposal) ? override.correction : undefined)) {
+      throw new AgentReviewConflict("The waiting description contains editing instructions. Revise the proposal to name the external event before approving.")
     }
     const active = await tx.select().from(alerts).where(and(eq(alerts.orderId, orderId),
       inArray(alerts.status, ["OPEN", "ACKNOWLEDGED"]))).for("update")

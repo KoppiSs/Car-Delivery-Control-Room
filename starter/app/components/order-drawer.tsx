@@ -4,9 +4,10 @@ import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { OrderPane, type Detail } from "./order-detail"
 
-export function OrderDrawer({ order, onDismiss }: {
+export function OrderDrawer({ order, onDismiss, readOnly = false }: {
   order: { id: string; reference: string }
   onDismiss: () => void
+  readOnly?: boolean
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [detail, setDetail] = useState<Detail | null>(null)
@@ -48,16 +49,16 @@ export function OrderDrawer({ order, onDismiss }: {
       if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onDismiss()
     }}>
     <header className="order-drawer-header">
-      <div><p>Order review</p><h2 id="order-drawer-title">{order.reference}</h2></div>
+      <div><p>{readOnly ? "Delivery details · Read only" : "Order review"}</p><h2 id="order-drawer-title">{order.reference}</h2></div>
       <div className="order-drawer-actions">
-        <Link href={`/orders/${order.id}`} className="order-drawer-full">Open full page</Link>
+        {!readOnly && <Link href={`/orders/${order.id}`} className="order-drawer-full">Open full page</Link>}
         <button type="button" className="order-drawer-close" onClick={onDismiss} aria-label="Close order review" autoFocus>×</button>
       </div>
     </header>
     <div className="order-drawer-content" aria-busy={!detail && !error}>
       {error ? <div className="control-empty" role="alert"><h3>Unable to open order</h3><p>{error}</p>
         <button type="button" onClick={() => { setError(""); setAttempt((value) => value + 1) }}>Try again</button>
-      </div> : detail ? <OrderPane detail={detail} /> : <div className="order-drawer-loading" role="status"><div className="control-placeholder" /><p>Loading order…</p></div>}
+      </div> : detail ? <OrderPane detail={detail} readOnly={readOnly} /> : <div className="order-drawer-loading" role="status"><div className="control-placeholder" /><p>Loading order…</p></div>}
     </div>
   </dialog>
 }

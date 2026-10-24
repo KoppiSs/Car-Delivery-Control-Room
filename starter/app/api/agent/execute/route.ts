@@ -1,5 +1,5 @@
 ﻿import { executeMockResolution } from "@/lib/agent-execute"
-import { isAgentProposal, isExecutableToolCall } from "@/lib/agent"
+import { isAgentProposal, isExecutableToolCall, isExternalWaitingDescription } from "@/lib/agent"
 import { AgentReviewConflict } from "@/lib/agent-store"
 
 export const runtime = "nodejs"
@@ -25,6 +25,9 @@ export async function POST(request: Request) {
   if (!isExecutableToolCall(action) || typeof waiting !== "string" || !waiting.trim() || waiting.length > 500
     || (body.proposal !== undefined && !isAgentProposal(body.proposal))) {
     return Response.json({ error: "Provide an action_type, nonempty payload object and waiting_on_description (1–500 characters)." }, { status: 400 })
+  }
+  if (!isExternalWaitingDescription(waiting)) {
+    return Response.json({ error: "Waiting on must name an external reply, document or confirmation. Revise the proposal before approving." }, { status: 400 })
   }
   try {
     const result = await executeMockResolution(body.orderId, action, waiting, isAgentProposal(body.proposal) ? body.proposal : undefined)

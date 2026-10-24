@@ -97,6 +97,13 @@ export type BoardCard = {
   updatedAt: string
 }
 
+export type DeliveriesOverview = {
+  snapshotAt: string | null
+  total: number
+  visible: BoardCard[]
+  query: string
+}
+
 export type Overview = {
   snapshotAt: string | null
   total: number

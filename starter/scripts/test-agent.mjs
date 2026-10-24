@@ -34,7 +34,7 @@ const routeSource = (await readFile(new URL("../app/api/agent/route.ts", import.
   .replace('"@/lib/agent-store"', JSON.stringify(storeUrl))
   .replace('"@/lib/agent-jobs"', JSON.stringify(jobsUrl))
 const { POST } = await import(asModule(routeSource))
-const { isAgentProposal, parseAgentOutput } = await import(contractUrl)
+const { isAgentProposal, parseAgentOutput, isExternalWaitingDescription } = await import(contractUrl)
 const proposal = {
   ...executableFields,
   investigation_summary: [{ text: "A missed check-in is recorded; no replacement booking is evidenced.", source_event_ids: [] }],
@@ -176,6 +176,31 @@ try {
   assert.equal(state.feedback.length, 1)
   assert.equal(state.feedback[0].outcome, "APPLIED")
   assert.deepEqual(state.feedback[0].previous, proposal)
+  for (const waiting of ['Revise this entirely again.', 'Waiting for the agent to rewrite the proposal.', 'Check trains instead of ferries']) {
+    assert.equal(isExternalWaitingDescription(waiting), false)
+    assert.equal(parseAgentOutput({ response: JSON.stringify({ ...proposal, waiting_on_description: waiting }) }), null)
+  }
+  for (const waiting of ['Signed delivery proof from the receiving site', 'Revised train quote from the provider', 'Seller confirmation of the corrected pickup address']) {
+    assert.equal(isExternalWaitingDescription(waiting), true)
+  }
+  const steer = 'Prioritise the rail option'
+  assert.equal(parseAgentOutput({ response: JSON.stringify({ ...proposal, waiting_on_description: steer }) }, [], steer), null,
+    'A copied steer must be rejected even when it has no known editing keywords')
+  state.cached = proposal
+  let revisionAttempts = 0
+  const revised = { ...proposal, waiting_on_description: 'A train quote from the travel provider.' }
+  globalThis.fetch = async (_url, options) => {
+    const generation = JSON.parse(options.body)
+    assert.match(generation.prompt, /previousWaitingOn/)
+    assert.ok(generation.prompt.includes(proposal.waiting_on_description))
+    revisionAttempts++
+    return Response.json({ response: JSON.stringify(revisionAttempts === 1 ? { ...proposal, waiting_on_description: steer } : revised) })
+  }
+  const repaired = await POST(request({ events: [], correction: steer, previousProposal: proposal }))
+  assert.equal(repaired.status, 200)
+  assert.deepEqual(await repaired.json(), revised)
+  assert.equal(revisionAttempts, 2, 'An echoed edit instruction must be repaired before saving')
+  assert.equal(state.cached.waiting_on_description, revised.waiting_on_description)
   state.mode = "MANUAL"
   assert.equal((await POST(request({ events: [] }))).status, 409, "Manual orders must not regenerate proposals")
   console.log("Verified agent route: cache, persistence, validation, drawer cancellation, duplicate generation, busy handling, stalled-body timeout, truncation, and retries.")
