@@ -1,4 +1,18 @@
+const LOOKUP_TOOLS = [
+  { name: "get_tracking", description: "Read this order's current-assignment driver-app observations, with observed/received times, coarse progress and reported ETA. Signals are not verified locations." },
+  { name: "get_travel", description: "Read this order's travel quotes, reservations and gate events. A quote is not a booking; a booking is not proof of boarding." },
+  { name: "get_driver_activity", description: "Read this order's current-driver pickup, delivery and expense-submission events. An expense submission is not approval or payment." },
+  { name: "get_order_context", description: "Read this order's details, customer, current assignments, selected delivery promise and recorded movement context." },
+] as const
+
 export const AGENT_TOOLS = [
+  ...LOOKUP_TOOLS.map(({ name, description }) => ({
+    type: "function" as const,
+    function: {
+      name, description, strict: true,
+      parameters: { type: "object" as const, properties: {}, required: [], additionalProperties: false },
+    },
+  })),
   {
     type: "function",
     function: {
@@ -51,7 +65,12 @@ export const AGENT_TOOLS = [
   },
 ] as const
 
-export async function runTool(toolName: string, args: any, orderId: string): Promise<string> {
+export async function runTool(toolName: string, args: any, orderId: string): Promise<unknown> {
+  const lookup = LOOKUP_TOOLS.find((tool) => tool.name === toolName)
+  if (lookup) {
+    const readers = await import("./lookups.ts")
+    return await readers[lookup.name](orderId)
+  }
   if (toolName === "message_driver") {
     // orderId is execution context supplied by the caller, not a model parameter.
     const { simulateDriverReply } = await import("./driver-sim.ts")

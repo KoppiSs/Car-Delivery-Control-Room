@@ -283,3 +283,10 @@ export async function triageAll(): Promise<Case[]> {
   const { bundles } = await loadBoardBundles()
   return bundles.map(triageBundle).sort((a, b) => a.id.localeCompare(b.id))
 }
+
+/** Load and assess one order using the same read-only triage rules. */
+export async function triageOrder(orderId: string): Promise<Case | null> {
+  const { loadOrder } = await import("./present/load")
+  const loaded = await loadOrder(orderId)
+  return loaded ? triageBundle(loaded.bundle) : null
+}

@@ -23,13 +23,16 @@ function load(filename) {
       loaderCalls++
       assert.equal(options, undefined, 'All-order triage must not ask for exception-only filtering')
       return { bundles: suppliedBundles }
+    }, loadOrder: async (id) => {
+      const bundle = suppliedBundles.find((entry) => entry.order.id === id)
+      return bundle ? { bundle } : null
     } }
     return name.startsWith('.') ? load(resolve(dirname(filename), name + '.ts')) : require(name)
   }, module, module.exports)
   return module.exports
 }
 const { NOW, classifyCase } = load('lib/case.ts')
-const { evaluateTriage, evaluateBundles, assessAllOrders, issuePriority, triageAll, triageBundle } = load('lib/triage.ts')
+const { evaluateTriage, evaluateBundles, assessAllOrders, issuePriority, triageAll, triageBundle, triageOrder } = load('lib/triage.ts')
 const { readAppPositions, readCurrentAssignments, readDriverActivity, readOrderContext, readDriverDelayMessages } = load('lib/triage-read.ts')
 const { Directory } = load('lib/present/actors.ts')
 const dataset = resolve(root, '../dataset/data')
@@ -108,6 +111,8 @@ assert.equal(loaderCalls, 1)
 const sharedCases = await triageAll()
 assert.equal(loaderCalls, 2)
 assert.equal(sharedCases.length, manifest.tables.orders)
+assert.deepEqual(await triageOrder('ord-00806'), sharedCases.find((entry) => entry.id === 'ord-00806'), 'Per-order triage must use the same facts and checks as all-order triage')
+assert.equal(await triageOrder('missing-order'), null)
 for (const [reference, expectedRoute] of expected) {
   const actualCase = sharedCases.find((entry) => entry.reference === reference)
   assert.equal(classifyCase(actualCase), expectedRoute, 'B can derive classification from shared Case status')

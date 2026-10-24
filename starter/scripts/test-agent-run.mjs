@@ -8,6 +8,7 @@ const toolsUrl = moduleUrl(`
   export const calls = [];
   export async function runTool(name, args, orderId) {
     calls.push({ name, args, orderId });
+    if (name.startsWith('get_')) return { orderId, tool: name, records: [] };
     return name === 'message_driver' ? 'Location sharing off, near Jyväskylä, on time.' : name + ' executed';
   }
 `)
@@ -45,9 +46,14 @@ try {
   assert.deepEqual(await runAgent('CD-421013', {}), handoff)
   replies = [{ resolution: 'No further action needed.' }]
   assert.deepEqual(await runAgent('CD-420806', {}), { resolution: 'No further action needed.' })
+  const lookupInput = inputs.length
+  replies = [{ tool_call: { name: 'get_tracking', args: {} } }, { resolution: 'Tracking checked.' }]
+  assert.deepEqual(await runAgent('ord-00806', {}), { resolution: 'Tracking checked.' })
+  assert.deepEqual(JSON.parse(inputs[lookupInput + 1].messages.at(-1).content), { orderId: 'ord-00806', tool: 'get_tracking', records: [] }, 'Structured lookup results must be serialized once into the next user message')
   const before = calls.length
   for (const invalid of [{ tool_call: { name: 'unknown', args: {} } },
     { tool_call: { name: 'message_driver', args: { question: 'Where?', orderId: 'other-order' } } },
+    { tool_call: { name: 'get_tracking', args: { orderId: 'other-order' } } },
     { tool_call: { name: 'close_case', args: { reason: 'Done' } } }, { ...closed, resolution: 'Both are forbidden' }]) {
     replies = [invalid]
     await assert.rejects(runAgent('CD-420806', {}))
