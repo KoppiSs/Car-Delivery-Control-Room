@@ -29,7 +29,7 @@ async function generateProposals({ sql, fetchImpl = fetch, logger = console, mod
           body: JSON.stringify(buildAgentGenerationRequest(events, { order, alerts }, model, attempt)),
         })
         if (!response.ok) throw new Error(`Ollama returned HTTP ${response.status}; check the server and installed model ${model}.`)
-        proposal = parseAgentOutput(await response.json())
+        proposal = parseAgentOutput(await response.json(), events.map((event) => event.id))
         if (proposal) break
       }
       if (!proposal) throw new Error("Ollama did not return a complete proposal matching the required executable follow-up contract.")

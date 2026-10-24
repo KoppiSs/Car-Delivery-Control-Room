@@ -77,7 +77,7 @@ export async function POST(request: Request) {
           })
           if (!response.ok) return { status: 503, body: { error: "The local model is unavailable. Check that OLLAMA_MODEL names an installed model." } }
           const output = await response.json()
-          proposal = parseAgentOutput(output)
+          proposal = parseAgentOutput(output, (body.events as Record<string, unknown>[]).flatMap((event) => typeof event.id === "string" ? [event.id] : []))
           if (proposal) break
           if (attempt === 1) return { status: 502, body: { error: "The agent couldn't prepare a complete proposal. Please retry the investigation." } }
         }

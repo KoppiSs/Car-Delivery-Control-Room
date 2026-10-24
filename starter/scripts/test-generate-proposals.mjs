@@ -8,7 +8,7 @@ const { generateProposals } = createRequire(import.meta.url)("./generate_proposa
 const sql = postgres(process.env.DATABASE_URL, { max: 1 })
 const prefix = `test-batch-${randomUUID()}`
 const rollback = new Error("Rollback test fixtures")
-const proposal = { ...executableFields, investigation_summary: ["Fictional test evidence needs review."], proposed_action: "Ask an operator to review the evidence.", decision_button_text: "Approve follow-up" }
+const proposal = { ...executableFields, investigation_summary: [{ text: "Fictional test evidence needs review.", source_event_ids: [] }], proposed_action: "Ask an operator to review the evidence.", decision_button_text: "Approve follow-up" }
 try {
   const [existing] = await sql`select count(*)::int as count from orders where upper(status) = 'BLOCKED' and agent_proposal is null`
   assert.equal(existing.count, 0, "Run this fixture test against a database with no pending blocked orders")

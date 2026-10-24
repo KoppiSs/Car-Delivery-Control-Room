@@ -7,26 +7,29 @@ const React = require('react')
 const runtime = require('react/jsx-runtime')
 const { renderToStaticMarkup } = require('react-dom/server')
 const { transformSync } = require('next/dist/build/swc')
-const { isAgentProposal, isExecutableAgentProposal } = require('../lib/agent.ts')
+const { investigationText, isAgentProposal, isExecutableAgentProposal } = require('../lib/agent.ts')
 const source = await readFile(new URL('../app/components/agent-proposal.tsx', import.meta.url), 'utf8')
 const { code } = transformSync(source, { filename: 'agent-proposal.tsx', jsc: {
   parser: { syntax: 'typescript', tsx: true }, transform: { react: { runtime: 'automatic' } }, target: 'es2022',
 }, module: { type: 'commonjs' } })
 let effects = []
 let buttons = []
+const findings = []
+const hovered = []
 let calls = 0
 let refreshes = 0
 let finish
-const proposal = { ...executableFields, investigation_summary: ['Evidence gathered.'], proposed_action: 'Operator review.', decision_button_text: 'Approve follow-up' }
+const proposal = { ...executableFields, investigation_summary: [{ text: 'Evidence gathered.', source_event_ids: ['evt-source-1', 'evt-source-2'] }], proposed_action: 'Operator review.', decision_button_text: 'Approve follow-up' }
 const captureJsx = (fn) => (...args) => {
   if (args[0] === 'button') buttons.push(args[1])
+  if (args[0] === 'li' && args[1].className === 'investigation-finding') findings.push(args[1])
   return fn(...args)
 }
 const dependencies = (name) => {
   if (name === 'next/navigation') return { useRouter: () => ({ refresh() { refreshes++ } }) }
   if (name === 'react') return { ...React, useEffect(effect) { effects.push(effect) } }
   if (name === 'react/jsx-runtime') return { ...runtime, jsx: captureJsx(runtime.jsx), jsxs: captureJsx(runtime.jsxs) }
-  if (name === '@/lib/agent') return { isAgentProposal, isExecutableAgentProposal }
+  if (name === '@/lib/agent') return { investigationText, isAgentProposal, isExecutableAgentProposal }
   if (name === '@/lib/present/time') return require('../lib/present/time.ts')
   if (name === '@/lib/agent-request') return { fetchAgentProposal(payload) {
     calls++
@@ -54,12 +57,22 @@ await pending
 for (const cleanup of cleanups) cleanup()
 effects = []
 buttons = []
-const cached = renderToStaticMarkup(React.createElement(AgentProposalCard, { detail: { ...detail, order: { ...detail.order, agentProposal: proposal } } }))
+const cached = renderToStaticMarkup(React.createElement(AgentProposalCard, { detail: { ...detail, order: { ...detail.order, agentProposal: proposal } }, onHoveredEventIdsChange: (ids) => hovered.push(ids) }))
 for (const effect of effects) effect()
 assert.ok(cached.includes('Evidence gathered.'))
 assert.ok(!cached.includes('Generate proposal'))
 assert.ok(cached.includes('Edit Proposal'))
 assert.ok(cached.includes('Take Over'))
+const finding = findings[0]
+assert.equal(finding.tabIndex, 0)
+finding.onMouseEnter()
+assert.deepEqual(hovered.at(-1), ['evt-source-1', 'evt-source-2'])
+finding.onMouseLeave()
+assert.deepEqual(hovered.at(-1), [])
+finding.onFocus()
+assert.deepEqual(hovered.at(-1), ['evt-source-1', 'evt-source-2'])
+finding.onBlur()
+assert.deepEqual(hovered.at(-1), [])
 const approveButton = buttons.find((button) => button.children === 'Approve follow-up')
 assert.equal(approveButton.disabled, false)
 const nativeFetch = globalThis.fetch

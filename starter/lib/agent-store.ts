@@ -15,7 +15,7 @@ export function sameJson(a: unknown, b: unknown): boolean {
 export function sameProposal(previous: unknown, expected: AgentProposal): boolean {
   return isAgentProposal(previous) && previous.proposed_action === expected.proposed_action
     && previous.decision_button_text === expected.decision_button_text
-    && JSON.stringify(previous.investigation_summary) === JSON.stringify(expected.investigation_summary)
+    && sameJson(previous.investigation_summary, expected.investigation_summary)
     && sameJson(previous.executable_tool_call, expected.executable_tool_call)
     && previous.waiting_on_description === expected.waiting_on_description
 }

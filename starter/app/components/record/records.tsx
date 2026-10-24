@@ -15,7 +15,7 @@ function plural(count: number, noun: string, nouns = `${noun}s`): string {
 }
 
 /** Every linked record, folded away until someone opens it. */
-export function RecordsPanel({ view, orderId }: { view: RecordView; orderId: string }) {
+export function RecordsPanel({ view, orderId, hoveredEventIds = [] }: { view: RecordView; orderId: string; hoveredEventIds?: string[] }) {
   const steps = view.journey.groups.reduce((sum, group) => sum + group.steps.length, 0)
   const openAlerts = view.alerts.filter((alert) => alert.status === "OPEN").length
   const openWork = view.workItems.filter((item) => item.status !== "DONE").length
@@ -29,7 +29,7 @@ export function RecordsPanel({ view, orderId }: { view: RecordView; orderId: str
     { id: "costs", icon: "file", title: "Costs", sub: view.expenses.length ? ["APPROVED", "SUBMITTED", "REJECTED", "SUPERSEDED"].map((status) => [status, view.expenses.filter((expense) => expense.status === status).length] as const).filter(([, count]) => count).map(([status, count]) => `${count} ${status.toLowerCase()}`).join(" · ") : "no cost claim", count: view.expenses.length, body: <CostsPanel view={view} /> },
     { id: "evidence-details", icon: "photo", title: "Proofs, documents and custody", sub: `${plural(view.proofs.length, "proof")} · ${plural(view.documents.length, "document")}${view.custody.assets.length ? ` · ${plural(view.custody.assets.length, "tracked asset")}` : ""}${view.siteVisits.length ? ` · ${plural(view.siteVisits.length, "site visit")}` : ""}`, count: view.proofs.length + view.documents.length, body: <EvidenceDetails view={view} /> },
     { id: "proposals", icon: "proposal", title: "Prior agent work and room activity", sub: view.proposals.length || view.notifications.length ? `${plural(view.proposals.length, "proposal")} with rationale, evidence and execution · ${plural(view.notifications.length, "room post")}` : "nothing recorded", count: view.proposals.length + view.notifications.length, body: <ProposalCards view={view} /> },
-    { id: "events", icon: "waiting", title: "All events", sub: "the recorded history by day, with what each event changed", count: view.historyTotal, body: <HistoryDays view={view} /> },
+    { id: "events", icon: "waiting", title: "All events", sub: "the recorded history by day, with what each event changed", count: view.historyTotal, body: <HistoryDays view={view} hoveredEventIds={hoveredEventIds} /> },
   ]
   return <section className="records" id="records">
     <div className="sec-head"><h2>Everything on this order</h2><span className="note">Folded away. Open what you need; the <a href={`/api/orders/${orderId}`} target="_blank" rel="noopener noreferrer">order API</a> has every field.</span></div>

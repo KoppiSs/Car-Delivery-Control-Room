@@ -37,7 +37,7 @@ const { POST } = await import(asModule(routeSource))
 const { isAgentProposal, parseAgentOutput } = await import(contractUrl)
 const proposal = {
   ...executableFields,
-  investigation_summary: ["Event ev-1 records a missed check-in; no replacement booking is evidenced."],
+  investigation_summary: [{ text: "A missed check-in is recorded; no replacement booking is evidenced.", source_event_ids: [] }],
   proposed_action: "Ask the driver for their current situation and bring replacement travel options to an operator for approval.",
   decision_button_text: "Approve follow-up",
 }
@@ -94,6 +94,10 @@ try {
   const { executable_tool_call, waiting_on_description, ...legacy } = proposal
   assert.equal(isAgentProposal(legacy), true, "Historical plans must remain readable")
   assert.equal(parseAgentOutput({ response: JSON.stringify(legacy) }), null, "New generation must include an executable action and waiting description")
+  const cited = { ...proposal, investigation_summary: [{ text: "A source-backed finding.", source_event_ids: ["evt-source"] }] }
+  assert.deepEqual(parseAgentOutput({ response: JSON.stringify(cited) }, ["evt-source"]), cited)
+  assert.equal(parseAgentOutput({ response: JSON.stringify(cited) }, []), null, "Generated citations must refer to supplied events")
+  assert.equal(parseAgentOutput({ response: JSON.stringify({ ...proposal, investigation_summary: ["Unlinked old finding"] }) }), null)
   globalThis.fetch = async () => Response.json({ response: "not json" })
   assert.equal((await POST(request({ events: [] }))).status, 502)
   globalThis.fetch = async () => new Response("model not found", { status: 404 })

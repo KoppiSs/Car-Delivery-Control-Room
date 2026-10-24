@@ -614,3 +614,8 @@ details.more > :not(summary) { margin-top: 8px; }
 .follow-up-waiting p, .agent-proposal .follow-up-waiting p { font-size: 15px; line-height: 1.55; font-weight: 500; color: #294c3c; }
 .agent-legacy-note { margin-top: 18px; padding: 14px; background: var(--canvas); border-radius: 9px; }
 .agent-legacy-note .agent-secondary { margin-top: 12px; }
+
+/* Source evidence highlighted by the investigation summary. */
+.event.bg-yellow-50 { background: #fffbeb; box-shadow: inset 3px 0 #d8af42; border-radius: 5px; }
+.investigation-finding { border-radius: 4px; }
+.investigation-finding:hover, .investigation-finding:focus-visible { background: #fffbeb; }

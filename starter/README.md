@@ -63,6 +63,19 @@ also bounds the complete request to 195 seconds, so a stalled connection or body
 always leaves the loading state with a retry message. Valid cached proposals in
 the order detail render immediately without another agent request.
 
+New investigation findings use `{ "text": "Finding", "source_event_ids": ["event-id"] }`.
+Ollama's schema restricts those IDs to supplied order events, and the server
+validates citations before saving them. Context-only findings use an empty array.
+Saved plain-text summaries remain readable; generating or revising a plan adds
+the new source links without guessing citations for historical text.
+
+The order detail owns `hoveredEventIds`. Hovering or focusing a linked finding
+highlights its matching entries in Activity and All events with `bg-yellow-50`.
+Cited events outside the six-event Activity preview are temporarily revealed in
+their existing chronological position. Leaving or blurring the finding clears
+the highlight. `node scripts/test-evidence-hover.mjs` checks both timelines and
+preview behavior; the proposal card test checks mouse and keyboard source IDs.
+
 For an existing database, run `npm run db:push` to add the column without reseeding.
 The equivalent additive SQL is in `migrations/0001_agent_proposal.sql`.
 Newly seeded orders start with null proposals. Proposals remain cached until

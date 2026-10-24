@@ -2,14 +2,16 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { isAgentProposal, isExecutableAgentProposal, type AgentProposal } from "@/lib/agent"
+import { investigationText, isAgentProposal, isExecutableAgentProposal, type AgentProposal } from "@/lib/agent"
 import { fetchAgentProposal } from "@/lib/agent-request"
 import { fmtDateTime } from "@/lib/present/time"
 import type { Detail } from "./order-detail"
 
 const STATUS_OPTIONS = [ ["NEW", "Preparing"], ["WAITING_FOR_PICKUP", "Waiting for pickup"], ["IN_TRANSIT", "In transit"], ["DELIVERED", "Delivered"], ["CANCELLED", "Cancelled"] ]
 
-export function AgentProposalCard({ detail, onUpdate }: { detail: Detail; onUpdate?: () => void }) {
+export function AgentProposalCard({ detail, onUpdate, onHoveredEventIdsChange }: {
+  detail: Detail; onUpdate?: () => void; onHoveredEventIdsChange?: (ids: string[]) => void
+}) {
   const router = useRouter()
   const [followUp, setFollowUp] = useState(detail.order.status === "follow_up")
   const [waitingOn, setWaitingOn] = useState(detail.order.waitingOnDescription ?? "")
@@ -30,6 +32,7 @@ export function AgentProposalCard({ detail, onUpdate }: { detail: Detail; onUpda
   const request = useRef<AbortController | null>(null)
 
   useEffect(() => () => request.current?.abort(), [])
+  useEffect(() => { onHoveredEventIdsChange?.([]) }, [proposal, mode, followUp, onHoveredEventIdsChange])
   useEffect(() => {
     setMode(detail.order.agentMode ?? "AGENT")
     setFollowUp(detail.order.status === "follow_up")
@@ -131,7 +134,16 @@ export function AgentProposalCard({ detail, onUpdate }: { detail: Detail; onUpda
       <button type="button" className="agent-secondary" disabled={manualBusy} onClick={() => void manualUpdate("takeover")}>Take Over</button>
     </> : <>
       {proposal ? <>
-        <h3>Investigation summary</h3><ul>{proposal.investigation_summary.map((finding, index) => <li key={index}>{finding}</li>)}</ul>
+        <h3>Investigation summary</h3><ul>{proposal.investigation_summary.map((finding, index) => {
+          const sourceIds = typeof finding === "string" ? [] : finding.source_event_ids
+          return <li key={index} tabIndex={sourceIds.length ? 0 : undefined}
+            className={sourceIds.length ? "investigation-finding" : undefined}
+            title={sourceIds.length ? "Hover or focus to highlight supporting activity" : undefined}
+            onMouseEnter={() => onHoveredEventIdsChange?.(sourceIds)} onMouseLeave={() => onHoveredEventIdsChange?.([])}
+            onFocus={() => onHoveredEventIdsChange?.(sourceIds)} onBlur={() => onHoveredEventIdsChange?.([])}>
+            {investigationText(finding)}
+          </li>
+        })}</ul>
         <h3>Proposed action</h3><p>{proposal.proposed_action}</p>
         <div className="agent-actions"><button type="button" className="agent-primary" disabled={loading || manualBusy || !isExecutableAgentProposal(proposal)} onClick={() => void executeFollowUp()}>Approve follow-up</button>
           <button type="button" className="agent-secondary" disabled={decision === "REJECTED" || loading || manualBusy} onClick={() => void reviewDecision("REJECTED")}>{decision === "REJECTED" ? "Rejected" : "Reject Proposal"}</button>

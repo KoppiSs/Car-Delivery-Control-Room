@@ -13,8 +13,10 @@ export type Detail = { order: { id: string; reference: string; status?: string; 
 
 export function OrderPane({ detail }: { detail: Detail }) {
   const [current, setCurrent] = useState(detail)
+  const [hoveredEventIds, setHoveredEventIds] = useState<string[]>([])
   const refreshVersion = useRef(0)
   useEffect(() => setCurrent(detail), [detail])
+  useEffect(() => setHoveredEventIds([]), [detail.order.id])
   const refresh = useCallback(() => {
     const version = ++refreshVersion.current
     window.dispatchEvent(new Event("orders-updated"))
@@ -24,14 +26,14 @@ export function OrderPane({ detail }: { detail: Detail }) {
   }, [detail.order.id])
   const { view } = current
   return <>
-    <AgentProposalCard key={current.order.id} detail={current} onUpdate={refresh} />
+    <AgentProposalCard key={current.order.id} detail={current} onUpdate={refresh} onHoveredEventIdsChange={setHoveredEventIds} />
     <RecordHero view={view} />
     <Tiles tiles={view.tiles} />
     <RouteStrip view={view} />
     <ConversationsSection view={view} />
     <EvidenceSection view={view} />
     <DecisionsSection view={view} feedback={current.agentFeedback} />
-    <ActivitySection view={view} />
-    <RecordsPanel view={view} orderId={detail.order.id} />
+    <ActivitySection view={view} hoveredEventIds={hoveredEventIds} />
+    <RecordsPanel view={view} orderId={detail.order.id} hoveredEventIds={hoveredEventIds} />
   </>
 }
