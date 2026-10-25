@@ -33,7 +33,7 @@ export function isEditedPlan(value: unknown): value is EditedPlan {
 function describeEdit(original: AgentProposal, edited: EditedPlan, recipientName: string | null): string {
   const changes: string[] = []
   if (edited.action.trim() !== original.proposed_action.trim()) changes.push(`Action: "${edited.action.trim()}" instead of "${original.proposed_action.trim()}"`)
-  changes.push(`Goes to: ${FOLLOW_UP_RECIPIENT_LABELS[edited.recipient]}${recipientName ? ` (${recipientName})` : ""}`)
+  changes.push(`Who we ask: ${FOLLOW_UP_RECIPIENT_LABELS[edited.recipient]}${recipientName ? ` · ${recipientName}` : ""}`)
   if (edited.waitingOn.trim() !== (original.waiting_on_description ?? "").trim()) changes.push(`Waiting for: "${edited.waitingOn.trim() || "nothing"}"`)
   return changes.join("; ")
 }

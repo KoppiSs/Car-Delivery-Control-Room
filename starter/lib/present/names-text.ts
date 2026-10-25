@@ -14,8 +14,30 @@ export function idsIn(text: string): string[] {
 
 export type FollowUpRecipient = "customer" | "pickup_site" | "delivery_site" | "driver" | "nobody"
 
+// "Customer (dealer)": the dealer who bought the car, not the seller at the pickup site.
 export const FOLLOW_UP_RECIPIENT_LABELS: Record<FollowUpRecipient, string> = {
-  customer: "Customer", pickup_site: "Pickup site", delivery_site: "Delivery site", driver: "Driver", nobody: "Nobody (no reply needed)",
+  customer: "Customer (dealer)", pickup_site: "Pickup site (seller)", delivery_site: "Delivery site", driver: "Driver", nobody: "Nobody, no question to ask",
+}
+
+/** Who the plan's text names, in the order the words appear. Searched with the word boundaries below. */
+const NAMED_RECIPIENTS: [Exclude<FollowUpRecipient, "nobody">, RegExp][] = [
+  ["customer", /\b(?:customer|dealer|buyer)\b/i],
+  ["pickup_site", /\b(?:pickup site|pickup location|collection site|seller)\b/i],
+  ["delivery_site", /\b(?:delivery site|receiving site|delivery location)\b/i],
+  ["driver", /\bdriver\b/i],
+]
+
+/**
+ * The recipient a plan names ("Request customer confirmation…" → customer): whoever is named first in
+ * the action, else in what we wait for. Null when the plan names no one; a person always confirms it.
+ */
+export function suggestedRecipient(action: string, waitingOn = ""): FollowUpRecipient | null {
+  for (const text of [action, waitingOn]) {
+    const found = NAMED_RECIPIENTS.map(([recipient, pattern]) => ({ recipient, at: text.search(pattern) }))
+      .filter((entry) => entry.at >= 0).sort((a, b) => a.at - b.at)[0]
+    if (found) return found.recipient
+  }
+  return null
 }
 
 

@@ -318,7 +318,7 @@ export function CustomerEmailCard({ detail, onUpdate }: { detail: Detail; onUpda
 
       {phase === "closed" && <>
         {cases.map((entry) => <div key={entry.conversationId} className={styles.caseBlock}>
-          <p className={styles.caseHead}>To <b>{entry.recipientName}</b> · {RECIPIENT_LABELS[entry.recipientType].toLowerCase()} · {entry.templateLabel}</p>
+          <p className={styles.caseHead}>To {RECIPIENT_LABELS[entry.recipientType]} · <b>{entry.recipientName}</b> · {entry.templateLabel}</p>
           <Timeline emailCase={entry} />
           {outcome(entry)}
         </div>)}
@@ -350,8 +350,8 @@ export function CustomerEmailCard({ detail, onUpdate }: { detail: Detail; onUpda
 
       {phase === "edit" && draft && template && rendered && <form onSubmit={(event) => { event.preventDefault(); void send() }}>
         <div className={styles.meta}>
-          <span>To</span><span className={styles.to}><RecipientName recipient={draft.recipient} />
-            <small> · {RECIPIENT_LABELS[draft.recipient.type].toLowerCase()}</small></span>
+          <span>To</span><span className={styles.to}><small>{RECIPIENT_LABELS[draft.recipient.type]} · </small>
+            <RecipientName recipient={draft.recipient} /></span>
           <label htmlFor="customer-email-subject">Subject</label>
           <input id="customer-email-subject" className={styles.subject} value={subjectText} disabled={busy} onChange={(event) => setSubject(event.target.value)} />
         </div>

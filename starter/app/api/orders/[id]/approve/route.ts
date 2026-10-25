@@ -15,7 +15,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (value && typeof value === "object") body = value as Record<string, unknown>
   } catch { /* validated below */ }
   if (!isAgentProposal(body.proposal)) return Response.json({ error: "Send the agent's proposal." }, { status: 400 })
-  if (!isRecipient(body.recipient)) return Response.json({ error: "Who are we waiting for? Choose the customer, a site, the driver, or nobody." }, { status: 400 })
+  if (!isRecipient(body.recipient)) return Response.json({ error: "Who do we ask? Choose the customer (dealer), a site, the driver, or nobody." }, { status: 400 })
   const proposal = body.proposal
   try {
     const result = await approvePlan(id, proposal, { action: proposal.proposed_action, recipient: body.recipient,
