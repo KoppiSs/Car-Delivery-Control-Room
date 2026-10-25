@@ -207,12 +207,12 @@ export async function scanOrder(orderId: string): Promise<ScanOutcome> {
   return { outcome: "cleared", reason: checked(), checked: checked(), verdict: "fine" }
 }
 
-/** A person reopens an order the agent closed: it goes to Needs a review, tagged "Reopened by operator". */
+/** A person reopens an order whose warning the agent cleared: it goes to Needs a review, tagged "Reopened by operator". */
 export async function reopenScan(orderId: string): Promise<{ success: boolean; error?: string }> {
   const [latest] = await db.select({ command: operationalEvents.command }).from(operationalEvents)
     .where(and(eq(operationalEvents.orderId, orderId), inArray(operationalEvents.command, SCAN_COMMANDS)))
     .orderBy(desc(operationalEvents.recordedAt), desc(operationalEvents.id)).limit(1)
-  if (latest?.command !== "agent.scan_cleared") return { success: false, error: "Only an order the agent closed can be reopened." }
+  if (latest?.command !== "agent.scan_cleared") return { success: false, error: "Only an order whose warning the agent cleared can be reopened." }
   await db.transaction(async (tx) => {
     const now = await nextActionTime(tx)
     await tx.insert(operationalEvents).values({ id: `evt-${randomUUID()}`, orderId, command: "agent.scan_reopened", targetType: "order",

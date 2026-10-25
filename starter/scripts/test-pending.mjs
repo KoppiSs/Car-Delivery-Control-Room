@@ -72,7 +72,7 @@ try {
     await withProposal("ord-00399", order)
     const response = await call("/api/orders/ord-00399/approve", { proposal: FIXTURE })
     assert.equal(response.status, 400)
-    assert.match(response.body.error, /Who are we waiting for/)
+    assert.match(response.body.error, /Who do we ask/)
   }))
 
   await test("Approve (agent's plan) asking the driver → Pending, waiting for the driver by name", () => isolated("ord-00399", async (order) => {

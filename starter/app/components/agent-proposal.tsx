@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { investigationText, isAgentProposal, isExecutableAgentProposal, type AgentProposal } from "@/lib/agent"
 import { proposalProblem } from "@/lib/proposal-guard"
-import { FOLLOW_UP_RECIPIENT_LABELS, idsIn, withNames, type FollowUpRecipient } from "@/lib/present/names-text"
+import { FOLLOW_UP_RECIPIENT_LABELS, idsIn, suggestedRecipient, withNames, type FollowUpRecipient } from "@/lib/present/names-text"
 import { fmtDateTime } from "@/lib/present/time"
 import type { Detail } from "./order-detail"
 import { Reading, Suggestion } from "./statements"
@@ -25,10 +25,12 @@ export function AgentProposalCard({ detail, onUpdate }: {
   const [decision, setDecision] = useState(detail.order.agentDecision ?? "PENDING")
   const [decisionAt, setDecisionAt] = useState(detail.order.agentDecisionAt ?? null)
   // "Your version": a person's editable copy of the agent's plan. Null while not editing.
-  // The recipient starts unchosen: who we wait for is always picked by a person, never guessed.
+  // Who we ask starts as the one the plan names (if any); a person confirms or changes it.
   const [draft, setDraft] = useState<{ action: string; recipient: FollowUpRecipient | ""; waitingOn: string } | null>(null)
-  // Approving the agent's own plan also asks who we are waiting for. Null while the question is closed.
+  // Approving the agent's own plan also asks who we ask. Null while the question is closed.
   const [approveFor, setApproveFor] = useState<FollowUpRecipient | "" | null>(null)
+  // After approval only: the name of whoever we are now waiting for.
+  const [waitingWho, setWaitingWho] = useState<string | null>(detail.control?.row?.waiting?.who ?? null)
   const [lastCorrection, setLastCorrection] = useState("")
   const [endNote, setEndNote] = useState("")
   const [ending, setEnding] = useState<"solved" | "handed_back" | "">("")
@@ -54,9 +56,17 @@ export function AgentProposalCard({ detail, onUpdate }: {
   const storedProblem = proposal ? proposalProblem(proposal, { safetyStop: detail.safetyStop }) : null
   const parties = detail.parties ?? {}
   const partyName = (recipient: FollowUpRecipient | "") => !recipient || recipient === "nobody" ? null : parties[recipient]?.name ?? null
+  /** The recipient the plan names, when that party is on file; null leaves the choice empty and required. */
+  const suggestion = (() => {
+    if (!proposal) return null
+    const named = suggestedRecipient(proposal.proposed_action, proposal.waiting_on_description ?? "")
+    return named && partyName(named) ? named : null
+  })()
+  const suggestedTag = (selected: FollowUpRecipient | "") => selected && selected === suggestion
+    ? <small className="agent-suggested-tag"> · Suggested from the plan</small> : null
   /** One picker for both approvals: everyone on file by name, plus "Nobody". */
   const recipientOptions = (selected: FollowUpRecipient | "") => <>
-    {!selected && <option value="">Choose who we are waiting for…</option>}
+    {!selected && <option value="">Choose who we ask…</option>}
     {(Object.keys(FOLLOW_UP_RECIPIENT_LABELS) as FollowUpRecipient[]).map((recipient) => {
       const name = partyName(recipient)
       const missing = recipient !== "nobody" && !name
@@ -67,10 +77,11 @@ export function AgentProposalCard({ detail, onUpdate }: {
     setMode(detail.order.agentMode ?? "AGENT")
     setFollowUp(detail.order.status === "follow_up")
     setWaitingOn(detail.order.waitingOnDescription ?? "")
+    if (detail.control?.row?.waiting?.who) setWaitingWho(detail.control.row.waiting.who)
     setDecision(detail.order.agentDecision ?? "PENDING")
     setDecisionAt(detail.order.agentDecisionAt ?? null)
     setProposal(isAgentProposal(detail.order.agentProposal) ? detail.order.agentProposal : null)
-  }, [detail.order.id, detail.order.agentProposal, detail.order.agentMode, detail.order.agentDecision, detail.order.agentDecisionAt, detail.order.status, detail.order.waitingOnDescription])
+  }, [detail.order.id, detail.order.agentProposal, detail.order.agentMode, detail.order.agentDecision, detail.order.agentDecisionAt, detail.order.status, detail.order.waitingOnDescription, detail.control?.row?.waiting?.who])
 
   async function generate(steer?: string) {
     if (request.current || mode !== "AGENT" || followUp) return
@@ -104,7 +115,7 @@ export function AgentProposalCard({ detail, onUpdate }: {
         signal: AbortSignal.timeout(15_000), body: JSON.stringify({ proposal, recipient: approveFor }) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error ?? "The follow-up couldn't be recorded.")
-      setProposal(null); setFollowUp(result.status === "follow_up"); setWaitingOn(result.waiting_on_description ?? "")
+      setProposal(null); setFollowUp(result.status === "follow_up"); setWaitingOn(result.waiting_on_description ?? ""); setWaitingWho(partyName(approveFor))
       setDecision("APPROVED"); setDecisionAt(result.decidedAt); setDraft(null); setApproveFor(null)
       onUpdate?.()
       router.refresh()
@@ -129,7 +140,7 @@ export function AgentProposalCard({ detail, onUpdate }: {
   /** Opens "Your version" with the agent's plan copied in, names instead of ids. */
   function startEdit() {
     if (!proposal) return
-    setDraft({ action: named(proposal.proposed_action), recipient: "", waitingOn: named(proposal.waiting_on_description ?? "") })
+    setDraft({ action: named(proposal.proposed_action), recipient: suggestion ?? "", waitingOn: named(proposal.waiting_on_description ?? "") })
     setApproveFor(null); setProposalError("")
   }
 
@@ -143,7 +154,7 @@ export function AgentProposalCard({ detail, onUpdate }: {
       const result = await response.json()
       if (!response.ok) throw new Error(result.error ?? "Your version couldn't be approved.")
       setProposal(null); setDraft(null); setDecision("APPROVED"); setDecisionAt(result.decidedAt)
-      if (result.status === "follow_up") { setFollowUp(true); setWaitingOn(result.waiting_on_description ?? "") }
+      if (result.status === "follow_up") { setFollowUp(true); setWaitingOn(result.waiting_on_description ?? ""); setWaitingWho(partyName(draft.recipient)) }
       onUpdate?.()
     } catch (cause: unknown) { setProposalError(cause instanceof Error ? cause.message : "Your version couldn't be approved. Please retry.") }
     finally { setManualBusy(false) }
@@ -281,7 +292,7 @@ export function AgentProposalCard({ detail, onUpdate }: {
         <div className="agent-actions"><button type="submit" className="agent-primary" disabled={manualBusy || !endNote.trim() || !ending}>End manual control</button></div>
       </form>
     </> : mode === "MANUAL_COMPLETE" ? <p>Closed by an operator. The order history holds what was done and why.</p> : followUp ? <>
-      <div className="follow-up-waiting"><span>Waiting on</span><p>{named(waitingOn)}</p></div>
+      <div className="follow-up-waiting"><span>Waiting for {waitingWho ?? "a reply"}</span><p>{named(waitingOn)}</p></div>
       <p className="agent-approval-note">The mock action is recorded and the order is Pending. No real message or booking was sent.</p>
       {replyDraft ? <ReplyComposer from={replyDraft.from} question={replyDraft.question} initial={replyDraft.text} busy={manualBusy}
         quickPicks={replyDraft.quickPicks ? (replyDraft.recipientType === "customer"
@@ -313,7 +324,7 @@ export function AgentProposalCard({ detail, onUpdate }: {
         <Suggestion><p>{named(proposal.proposed_action)}</p>
           {isExecutableAgentProposal(proposal) && <p className="agent-approval-note"><b>After approval:</b> waiting on {named(proposal.waiting_on_description)}</p>}</Suggestion>
         {approveFor !== null && <form className="agent-edit-form" onSubmit={(event) => { event.preventDefault(); void executeFollowUp() }}>
-          <label htmlFor="approve-recipient">Who are we waiting for?</label>
+          <label htmlFor="approve-recipient">Who do we ask?{suggestedTag(approveFor)}</label>
           <select id="approve-recipient" value={approveFor} onChange={(event) => setApproveFor(event.target.value as FollowUpRecipient)} required autoFocus>
             {recipientOptions(approveFor)}
           </select>
@@ -359,7 +370,7 @@ export function AgentProposalCard({ detail, onUpdate }: {
           return ids.length > 0 && <details className="agent-ids"><summary>Ids in this plan</summary>
             <ul>{ids.map((id) => <li key={id}><span className="mono">{id}</span>{detail.names?.[id] ? ` · ${detail.names[id]}` : " · not on this order"}</li>)}</ul></details>
         })()}
-        <div className="agent-actions">{decision !== "REJECTED" && <button type="button" className="agent-primary" disabled={loading || manualBusy || !isExecutableAgentProposal(proposal) || approveFor !== null || !!draft} onClick={() => { setApproveFor(""); setProposalError("") }}>Approve follow-up</button>}
+        <div className="agent-actions">{decision !== "REJECTED" && <button type="button" className="agent-primary" disabled={loading || manualBusy || !isExecutableAgentProposal(proposal) || approveFor !== null || !!draft} onClick={() => { setApproveFor(suggestion ?? ""); setProposalError("") }}>Approve follow-up</button>}
           {decision !== "REJECTED" && <button type="button" className="agent-secondary" disabled={loading || manualBusy || rejectReason !== null} onClick={() => { setRejectReason(""); setRegen(null) }}>Reject</button>}
           <button type="button" className="agent-secondary" disabled={loading || manualBusy || !!draft} onClick={startEdit}>Edit</button>
           <button type="button" className="agent-secondary" disabled={manualBusy} onClick={() => void manualUpdate("takeover")}>Take Over</button></div>
@@ -369,17 +380,17 @@ export function AgentProposalCard({ detail, onUpdate }: {
           <p className="agent-approval-note">The agent's plan above stays as it is. Approving stores both.</p>
           <label htmlFor="your-action">Action</label>
           <textarea id="your-action" value={draft.action} onChange={(event) => setDraft({ ...draft, action: event.target.value })} maxLength={400} rows={2} required autoFocus />
-          <label htmlFor="your-recipient">Who it goes to</label>
+          <label htmlFor="your-recipient">Who do we ask?{suggestedTag(draft.recipient)}</label>
           <select id="your-recipient" value={draft.recipient} required onChange={(event) => setDraft({ ...draft, recipient: event.target.value as FollowUpRecipient })}>
             {recipientOptions(draft.recipient)}
           </select>
-          {draft.recipient !== "nobody" && <><label htmlFor="your-waiting">What we are waiting for</label>
+          {draft.recipient !== "nobody" && <><label htmlFor="your-waiting">What answer we need</label>
             <input id="your-waiting" className="agent-line-input" value={draft.waitingOn} onChange={(event) => setDraft({ ...draft, waitingOn: event.target.value })} maxLength={300} required /></>}
           <div className="agent-actions">
             <button type="submit" className="agent-primary" disabled={manualBusy || !draft.recipient || !draft.action.trim() || (draft.recipient !== "nobody" && !draft.waitingOn.trim())}>Approve your version</button>
             <button type="button" className="agent-secondary" disabled={manualBusy} onClick={() => setDraft(null)}>Cancel</button>
           </div>
-          <p className="agent-approval-note">{!draft.recipient ? "Choose who it goes to." : draft.recipient === "nobody" ? "No one is asked anything, so the order is not marked as waiting." : `After approval the order is Pending until ${partyName(draft.recipient)} answers.`}</p>
+          <p className="agent-approval-note">{!draft.recipient ? "The plan does not say who it asks, so choose before approving." : draft.recipient === "nobody" ? "No one is asked anything, so the order is not marked as waiting." : `After approval the order is Pending until ${partyName(draft.recipient)} answers.`}</p>
         </form>}
         <p className="agent-approval-note" role="status">{decision === "APPROVED" ? "Approval is saved. Operational follow-up has not been executed." : decision === "REJECTED" ? "" : "Approvals, edits, rejections and takeover are saved under Prior agent work."}</p>
       </> : !loading && <><p>Ask the agent to review this order’s history and suggest the next step.</p>

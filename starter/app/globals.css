@@ -598,6 +598,7 @@ details.more > :not(summary) { margin-top: 8px; }
 .agent-primary:hover { background: #1d3c2d; }
 .agent-primary:disabled { background: #e0e9e2; color: #496352; cursor: default; }
 .agent-proposal .agent-approval-note { margin-top: 12px; font-size: 12px; color: #607368; }
+.agent-proposal .agent-suggested-tag { font-size: 12px; font-weight: 500; color: #607368; }
 .agent-retry { margin-top: 14px; padding: 9px 14px; border: 1px solid #c4d3c8; border-radius: 8px; background: transparent; }
 @media (max-width: 600px) { .agent-proposal { padding: 20px; } .agent-proposal-heading { align-items: flex-start; flex-direction: column; gap: 6px; } .agent-primary { width: 100%; } }
 

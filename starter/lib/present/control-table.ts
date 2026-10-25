@@ -76,7 +76,7 @@ export type ControlRow = {
 export type ScanRow = { id: string; reference: string; vehicle: string; issue: string; deadline: { at: string; label: string } | null
   status: "Not checked yet" | "Checking" }
 
-/** An order the agent closed after a scan: listed so a person can see what was checked and reopen it. */
+/** An order whose warning the agent cleared after a scan (nothing wrong): listed so a person can see what was checked and reopen it. */
 export type AgentClosedRow = { id: string; reference: string; vehicle: string; at: string
   /** What was checked, built from the records. */
   checked: string
@@ -236,9 +236,19 @@ function stateFor(bundle: Bundle, supplement: Supplement, now: Date): ControlSta
   const scan = supplement.scans.get(id)
   const scanDone = scan && scan.command !== "agent.scan_started" ? scan : null
   const manualEndedAt = Math.max(ended?.at.getTime() ?? 0, scanDone?.at.getTime() ?? 0)
-  // Closed by a person: "Problem solved" ends it, unless something new happens afterwards.
-  const closedByOperator = ended?.choice === "solved"
-    && !activeAlerts.some((alert) => Date.parse(alert.triggeredAt) > manualEndedAt)
+  // A resolution: "Problem solved" by a person, or the agent's check that found nothing wrong (warning cleared).
+  // It covers everything the order was in the table for at that time: open alerts, failed checks and the scan's
+  // finding. Only evidence newer than it brings the order back: a new alert, a failed check on newer records, a
+  // new reply (replies are compared with manualEndedAt below). A later hand-back, escalation or reopen undoes it.
+  const solvedAt = ended?.choice === "solved" ? ended.at.getTime() : 0
+  const clearedAt = scanDone?.command === "agent.scan_cleared" ? scanDone.at.getTime() : 0
+  const undoneAt = Math.max(ended && ended.choice !== "solved" ? ended.at.getTime() : 0,
+    scanDone && scanDone.command !== "agent.scan_cleared" ? scanDone.at.getTime() : 0)
+  const resolvedAt = Math.max(solvedAt, clearedAt) > undoneAt ? Math.max(solvedAt, clearedAt) : 0
+  const resolvedBy = !resolvedAt ? null : solvedAt >= clearedAt ? "operator" : "agent"
+  const newEvidence = activeAlerts.some((alert) => Date.parse(alert.triggeredAt) > resolvedAt)
+    || failed.some((check) => check.evidence.some((entry) => !!entry.timestamp && Date.parse(entry.timestamp) > resolvedAt))
+  const resolved = !!resolvedBy && !newEvidence
   const waiting = waitingItems.filter((item) => Date.parse(item.since) > manualEndedAt).sort((a, b) => (a.needBy?.at ?? "9").localeCompare(b.needBy?.at ?? "9"))[0] ?? null
 
   const latest = cases[0]
@@ -270,21 +280,21 @@ function stateFor(bundle: Bundle, supplement: Supplement, now: Date): ControlSta
       section = "review"
       flag = { kind: "no_reply", at: null, text: `No reply yet${waiting.who ? ` from ${waiting.who}` : ""}: still waiting for ${waiting.about}` }
     } else section = "pending"
+  } else if (resolved) {
+    // Out of the table and the warning strip; All deliveries shows the latest outcome.
+    const at = new Date(resolvedAt).toISOString().slice(11, 16)
+    const sources = Array.isArray(scanDone?.changes.sources) ? (scanDone.changes.sources as unknown[]).filter((entry): entry is string => typeof entry === "string") : []
+    note = resolvedBy === "operator" ? `Closed by operator ${at}: ${ended!.note ?? "problem solved"}`
+      : `Agent checked ${at}: nothing wrong${sources.length ? ` · Sources: ${sources.join("; ")}` : ""}`
   } else if (scanDone?.command === "agent.scan_reopened") {
     section = "review"
-    flag = { kind: "reopened", at: scanDone.at.toISOString(), text: "Reopened by operator after the agent had closed it" }
+    flag = { kind: "reopened", at: scanDone.at.toISOString(), text: "Reopened by operator after the agent had cleared the warning" }
   } else if (scanDone?.command === "agent.scan_escalated") {
     section = "review"
     const unsure = scanDone.changes.kind === "unsure"
     const thinks = verdictText(scanDone.changes.verdict) ? ` · ${verdictText(scanDone.changes.verdict)}` : ""
     flag = { kind: unsure ? "agent_unsure" : "found_by_agent", at: scanDone.at.toISOString(),
       text: `${unsure ? "Agent couldn't confirm" : "No alert, found by agent"}: ${String(scanDone.changes.reason ?? "")}${thinks}` }
-  } else if (scanDone?.command === "agent.scan_cleared" && !activeAlerts.some((alert) => Date.parse(alert.triggeredAt) > scanDone.at.getTime())) {
-    const sources = Array.isArray(scanDone.changes.sources) ? (scanDone.changes.sources as unknown[]).filter((entry): entry is string => typeof entry === "string") : []
-    const thinks = verdictText(scanDone.changes.verdict) ? ` · ${verdictText(scanDone.changes.verdict)}` : ""
-    note = `Checked ${scanDone.at.toISOString().slice(11, 16)}: ${String(scanDone.changes.checked ?? scanDone.changes.reason ?? "nothing wrong found")}${thinks}${sources.length ? ` · Sources: ${sources.join("; ")}` : ""}`
-  } else if (closedByOperator) {
-    note = `Closed by operator ${ended!.at.toISOString().slice(11, 16)}: ${ended!.note ?? "problem solved"}`
   } else if (settled) {
     note = appliedNote(latest) ?? "Change recorded (simulated)"
   } else if (latest?.stage === "agreed" && latest.change) {
@@ -306,9 +316,10 @@ function stateFor(bundle: Bundle, supplement: Supplement, now: Date): ControlSta
     const strip: ScanRow | undefined = issue ? { id, reference: bundle.order.reference, vehicle: card.vehicle, issue: plainIssue(issue, bundle),
       deadline: issue.deadline ? { at: issue.deadline.at, label: issue.deadline.label } : assessment.deadline ? { at: assessment.deadline.at, label: assessment.deadline.label } : null,
       status: scan?.command === "agent.scan_started" ? "Checking" : "Not checked yet" } : undefined
-    // Closed by the agent: shown in "Closed by the agent today" with what it checked and the reply it read.
+    // Warning cleared by the agent (the order stays open): shown in "Checked by the agent today: nothing wrong"
+    // with what it checked and the reply it read.
     let agentClosed: AgentClosedRow | undefined
-    if (scanDone?.command === "agent.scan_cleared" && note) {
+    if (scanDone?.command === "agent.scan_cleared" && resolved && resolvedBy === "agent") {
       const reply = [...bundle.messages].reverse().find((message) => message.authorType === "driver"
         && Date.parse(message.authoredAt) <= scanDone.at.getTime() && Date.parse(message.authoredAt) > Date.parse(NOW))
       agentClosed = { id, reference: bundle.order.reference, vehicle: card.vehicle, at: scanDone.at.toISOString(),
@@ -382,7 +393,7 @@ export type ControlTable = {
   waitingCloseToDeadline: number
   /** Possible problems with no alert, for the warning strip. */
   strip: ScanRow[]
-  /** Orders the agent closed today (business date), newest first. */
+  /** Orders whose warning the agent cleared today (business date), newest first. */
   agentClosed: AgentClosedRow[]
 }
 

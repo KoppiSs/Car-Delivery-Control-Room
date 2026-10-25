@@ -35,7 +35,8 @@ export type Template = {
 export const NO_CHANGE_CLOSING = "We have not changed anything in the order. Nothing changes until you confirm."
 
 export const RECIPIENT_LABELS: Record<RecipientType, string> = {
-  customer: "Customer", pickup_site: "Pickup site", delivery_site: "Delivery site",
+  // The customer is the dealer who bought the car; the pickup site is the seller.
+  customer: "Customer (dealer)", pickup_site: "Pickup site (seller)", delivery_site: "Delivery site",
 }
 
 export const RECIPIENT_TYPES = Object.keys(RECIPIENT_LABELS) as RecipientType[]

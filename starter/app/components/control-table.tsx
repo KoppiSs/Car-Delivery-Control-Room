@@ -18,7 +18,7 @@ const FLAG_WORDS: Record<NonNullable<ControlRow["flag"]>["kind"], string> = {
   found_by_agent: "No alert, found by agent", agent_unsure: "Agent couldn't confirm", reopened: "Reopened by operator",
 }
 
-/** What the agent closed on its own today, collapsed, so a person can see why and reopen it. */
+/** Possible problems the agent checked today and found nothing wrong (warning cleared), collapsed, so a person can see why and reopen it. The orders themselves stay open. */
 function AgentClosedList({ rows, onOpen, onChanged }: { rows: AgentClosedRow[]; onOpen: (order: { id: string; reference: string }) => void; onChanged: () => void }) {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState("")
@@ -31,13 +31,13 @@ function AgentClosedList({ rows, onOpen, onChanged }: { rows: AgentClosedRow[]; 
     } catch (cause) { setError(cause instanceof Error ? cause.message : "It couldn't be reopened.") } finally { setBusy(null) }
   }
   return <details className={styles.closed}>
-    <summary>Closed by the agent today ({rows.length})</summary>
+    <summary>Checked by the agent today: nothing wrong ({rows.length})</summary>
     {error && <p role="alert" className={styles.demoError}>{error}</p>}
     {rows.length ? <ul>{rows.map((row) => <li key={row.id}>
       <div>
         <button type="button" className={styles.stripRef} onClick={() => onOpen({ id: row.id, reference: row.reference })}>{row.reference}</button>
         <span className={styles.stripCar}> {row.vehicle}</span>
-        <span className={styles.muted}> · closed <time dateTime={row.at} title={fmtLong(row.at)}>{fmtClock(row.at)}</time></span>
+        <span className={styles.muted}> · Warning cleared <time dateTime={row.at} title={fmtLong(row.at)}>{fmtClock(row.at)}</time></span>
       </div>
       <p><span className={styles.kind}>Checked</span>{row.checked}</p>
       {row.verdict && <p className={styles.muted}>{row.verdict}</p>}
@@ -46,7 +46,7 @@ function AgentClosedList({ rows, onOpen, onChanged }: { rows: AgentClosedRow[]; 
       {row.sources.length > 0 && <p className={styles.muted}>Sources: {row.sources.join("; ")}</p>}
       <button type="button" className={`agent-secondary ${styles.small}`} disabled={busy !== null} onClick={() => void reopen(row)}>
         {busy === row.id ? "Reopening…" : "Reopen"}</button>
-    </li>)}</ul> : <p className={styles.muted}>Nothing closed by the agent today.</p>}
+    </li>)}</ul> : <p className={styles.muted}>Nothing checked by the agent today.</p>}
   </details>
 }
 
@@ -65,7 +65,7 @@ function ScanStrip({ rows, now, onOpen, onChanged }: { rows: ScanRow[]; now: str
       const response = await fetch(`/api/orders/${encodeURIComponent(row.id)}/scan`, { method: "POST", signal: AbortSignal.timeout(300_000) })
       const result = await response.json().catch(() => ({}))
       const text = !response.ok ? "Agent couldn't check it; try again"
-        : result.outcome === "cleared" ? `Closed by the agent. Checked: ${result.checked}. ${VERDICT_WORDS[result.verdict as string] ?? ""}`
+        : result.outcome === "cleared" ? `Warning cleared: nothing wrong. Checked: ${result.checked}. ${VERDICT_WORDS[result.verdict as string] ?? ""}`
         : result.outcome === "asked_driver" ? `Asked ${result.driver}, waiting`
         : result.outcome === "escalated" ? `${result.kind === "unsure" ? "Agent couldn't confirm" : "Needs a person"}: ${result.reason}. ${VERDICT_WORDS[result.verdict as string] ?? ""}`
         : "Nothing to check any more"
