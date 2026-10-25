@@ -276,7 +276,47 @@ The same Compose file starts a local S3-compatible attachment store. `attachment
 - `GET /api/overview?q=...`: lane totals, per-lane attention counts and all matching order cards. Each card carries its derived attention items, the date that decides its next step and short work lines.
 - `GET /api/orders/:id`: one order with its linked addresses, managed site profiles when present, vehicle, assigned drivers, alerts, messages, event history and other records, plus `view`, the same information read out for the interface: a plain-language headline, four tiles, the route, threads, evidence, proposals and history.
 - `GET /api/entities/:kind` and `GET /api/entities/:kind/:id` for `driver`, `customer` and `site`: a list with order counts, and one record with its facts and the orders it is involved in. These serve the Customers, Drivers and Places pages.
-- `GET /api/inbox`: support threads that arrived without a safe order link, plus their messages, and a `view` with names and order references. Candidate orders are hypotheses; `linked_order_ids` holds confirmed links. These records stay in `related_records` so the order detail route does not silently file an unresolved thread under a car. The Inbox page shows them as a mailbox.
+- `GET /api/inbox`: support threads that arrived without a safe order link, plus their messages, and a `view` with names and order references. Candidate orders are hypotheses; `linked_order_ids` holds confirmed links. These records stay in `related_records` so the order detail route does not silently file an unresolved thread under a car.
+
+**Messages** (`/inbox`) is a Server Component backed by `getGlobalInbox()` in
+`lib/messages.ts`. It reads every row in `messages`, joining the order reference
+and contracting customer, and sorts by authored timestamp descending (then ID
+for ties). Sender and recipient names remain separate from the order's customer;
+per-message contact name snapshots preserve historical speakers.
+
+The Sent, Inbox and All messages views use `?view=sent|inbox|all`. All messages is
+the default and includes internal notes. Messages are grouped by order ID into
+one conversation row per order. Each row shows the order reference, customer,
+message count, and the latest message's sender, timestamp and snippet. Clicking
+a row expands its complete history in place, oldest first; clicking it again
+collapses it. Only one thread opens at a time. The rows are a Client Component
+with local state; database loading and filtering remain in the Server Component.
+History expands immediately without a history fetch or navigation. A separate **View Order** link
+inside the history opens `/cases/[id]`, which redirects to the existing order view.
+
+Inbox includes conversations with incoming public messages; Sent includes
+conversations with outgoing public messages. Their previews always show the
+latest activity from the complete conversation, and filter counts count
+conversations. Agent-authored messages remain in Sent/All messages without a
+separate agent filter. Internal previews retain their Internal label. Run
+`node scripts/test-global-inbox.mjs --http` with the app and database running to
+check the joins, unique grouping, latest previews and every view. Run
+`npm run test:e2e -- tests/e2e/message-threads.spec.ts` for browser checks covering
+expansion, full chronological history, collapse, keyboard use and View Order.
+
+Messages have a persistent `isRead` flag (`messages.is_read`, NOT NULL DEFAULT
+false). A thread is unread if any of its messages are unread; it has a colored
+dot and heavier text. Opening a thread clears its marker immediately and calls
+the `markThreadAsRead(orderId)` Server Action in `lib/actions.ts`, which marks
+that order's unread messages as read and revalidates Messages. Optimistic state
+tracks message IDs so newly arriving messages can still appear unread. Failed
+saves restore the marker and show a retry button. No page refresh is required.
+
+The additive migration is `migrations/0005_message_read.sql`. Apply it with
+`npm run db:push` or `node scripts/apply-message-read-migration.mjs` (the latter
+applies only this column). Browser checks in `tests/e2e/message-read.spec.ts`
+verify immediate feedback, persistence after reload, order isolation and retry.
+They use temporary records that are removed afterwards.
 - `GET /api/reference-data`: shared fictional terminals, road estimate ranges and operations actors that are not tied to a single order.
 - `GET /api/orders/:id/attachments`: metadata for the order's fictional PDFs and photos, with short-lived read-only URLs from the local attachment store.
 

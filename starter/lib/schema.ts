@@ -124,6 +124,7 @@ export const messages = pgTable("messages", {
   conversationId: text("conversation_id").notNull().references(() => conversations.id),
   authorType: text("author_type").notNull(),
   body: text("body").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
   authoredAt: timestamp("authored_at", { withTimezone: true }).notNull(),
   details: jsonb("details").$type<Record<string, unknown>>().notNull(),
 }, (table) => [index("messages_conversation_idx").on(table.conversationId, table.authoredAt)])
