@@ -22,7 +22,7 @@
 - Build warning remains in existing `starter/lib/attachments.ts:38`: dynamic filesystem access causes tracing of the whole project. This is outside A's triage implementation and did not fail the build. Node also emitted its experimental `stripTypeScriptTypes` warning in existing agent tests.
 - No test, typecheck or build failure required a source fix. Live database/API smoke tests were not run. Final Git status showed the same implementation files plus this work log; no commit, merge or push was performed.
 
-## 2026-10-25 — Person B agent integration and UI refinement
+## 2026-10-24 — Person B agent integration and UI refinement
 
 - Request: integrate local Llama 3.2 ReAct agent with real Postgres database, fix synchronization issues, unify inbox communication, implement threaded UI, and document.
 - Merged upstream main containing Person A's triage tables. Executed npm run db:push and npm run db:seed to synchronize the local Postgres schema, resolving "Order not found" API routing failures.
