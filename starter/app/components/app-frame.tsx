@@ -32,6 +32,6 @@ export function AppFrame({ children, section, snapshotAt, board = false }: { chi
       </nav>
       <div className="sidebar-foot">{snapshotAt ? `Snapshot ${fmtDateTime(snapshotAt)}` : "Fictional snapshot"}<br />Fictional data · read only</div>
     </aside>
-    <div className="main">{children}</div>
+    <div className="main"><p className="time-note">Times in UTC unless marked</p>{children}</div>
   </div>
 }

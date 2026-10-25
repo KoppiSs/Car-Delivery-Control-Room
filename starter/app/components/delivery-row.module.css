@@ -1,0 +1,31 @@
+/* Collapsible rows for All deliveries. One line when closed; checks with sources when open. */
+
+.row { background: transparent; }
+.summary { display: grid; grid-template-columns: 14px 104px minmax(120px, 1fr) minmax(120px, 1fr) auto; grid-template-areas: "icon ref car route status" "icon checked checked checked checked";
+  align-items: center; gap: 4px 16px; width: 100%; padding: 14px 20px; border: 0; background: transparent; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
+.summary:hover { background: var(--canvas); }
+.summary:focus-visible { outline: 2px solid #63846b; outline-offset: -3px; }
+.summary > svg { grid-area: icon; color: var(--muted); transition: transform .15s; }
+.summary[aria-expanded="true"] > svg { transform: rotate(90deg); }
+.reference { grid-area: ref; font-size: 12.5px; color: var(--muted); letter-spacing: .02em; }
+.car { grid-area: car; font-size: 14px; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.route { grid-area: route; font-size: 13.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status { grid-area: status; }
+.checked { grid-area: checked; font-size: 12px; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note { color: var(--brown); }
+
+.details { padding: 4px 20px 18px 50px; }
+.state { margin-bottom: 10px; font-size: 13px; color: var(--brown); }
+.state b { font-weight: 500; }
+.checks { display: grid; gap: 8px; margin-bottom: 14px; padding: 0; list-style: none; }
+.checks li { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 10px; }
+.checks p { font-size: 13.5px; line-height: 1.5; }
+.outcome { font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--subtle); padding-top: 3px; }
+.fail .outcome { color: var(--orange-ink); }
+.pass .outcome { color: var(--green-ink); }
+.sources { font-size: 12px !important; color: var(--muted); }
+
+@media (max-width: 700px) {
+  .summary { grid-template-columns: 14px minmax(0, 1fr) auto; grid-template-areas: "icon ref status" "icon car car" "icon route route" "icon checked checked"; }
+  .details { padding-left: 20px; }
+}

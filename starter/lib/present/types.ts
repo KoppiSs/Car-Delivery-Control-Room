@@ -105,6 +105,10 @@ export type DeliveriesOverview = {
   total: number
   visible: BoardCard[]
   query: string
+  /** Business time the checks were read at. */
+  checkedAt?: string
+  /** Per order: what was checked, and where it stands in the control table (or why it is not there). */
+  checks?: Record<string, import("./statements").DeliveryChecks & { table: string | null; notInTable: string | null }>
 }
 
 export type Overview = {

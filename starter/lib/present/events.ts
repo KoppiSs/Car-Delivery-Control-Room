@@ -181,8 +181,24 @@ export function describeEvent(event: EventRow, bundle: Bundle): HistoryEvent {
       text = "Operator took over this order"
       detail = str(changes.resolution_reason)
       break
+    case "manual_control.started":
+      text = "Operator took manual control"
+      detail = Array.isArray(changes.open_alert_ids) && changes.open_alert_ids.length
+        ? `${changes.open_alert_ids.length} alert${changes.open_alert_ids.length === 1 ? "" : "s"} still open` : "No open alerts"
+      break
+    case "manual_control.ended":
+      text = changes.choice === "solved" ? "Operator closed it: problem solved" : changes.choice === "handed_back" ? "Operator handed it back to the agent" : "Operator ended manual control"
+      detail = str(changes.note)
+      break
+    case "agent.action_approved":
+      text = changes.edited === true ? "Operator approved their own version of the plan" : "Operator approved the agent's plan"
+      break
+    case "agent.follow_up_reply_simulated":
+      text = "Simulated reply to the follow-up"
+      detail = str(changes.body)
+      break
     case "manual.note_added":
-      text = "Manual follow-up note saved"
+      text = "Operator recorded what they did"
       detail = str(changes.note)
       break
     case "manual.resolution_recorded":

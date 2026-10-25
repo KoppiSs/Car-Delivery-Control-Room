@@ -50,15 +50,17 @@ export function fmtClock(value: string | null | undefined, zone?: string | null)
   return parts(date, safeZone(zone), { hour: "2-digit", minute: "2-digit" })
 }
 
-/** "21 Oct 08:14" in the given zone, with the zone's short name when it is not UTC: "23 Oct 09:00 EEST". */
+/**
+ * "21 Oct 08:14" in the given zone, with the zone's short name when it is not UTC: "23 Oct 09:00 EEST".
+ * UTC is unmarked: the page header says "Times in UTC unless marked".
+ */
 export function fmtDateTime(value: string | null | undefined, zone?: string | null, withZone = true): string {
   const date = parse(value)
   if (!date) return ""
   const tz = safeZone(zone)
   const text = parts(date, tz, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).replace(",", "")
-  if (!withZone) return text
-  const name = tz === "UTC" ? "UTC" : zoneName(date, tz)
-  return `${text} ${name}`
+  if (!withZone || tz === "UTC") return text
+  return `${text} ${zoneName(date, tz)}`
 }
 
 /** "21 October 2026, 08:14 UTC" for tooltips. */
@@ -79,14 +81,15 @@ export function fmtRange(start: string | null | undefined, end: string | null | 
   const to = parse(end)
   if (!from) return ""
   const tz = safeZone(zone)
-  const name = tz === "UTC" ? "UTC" : zoneName(from, tz)
+  const name = tz === "UTC" ? "" : zoneName(from, tz)
   const fromDay = parts(from, tz, { day: "numeric", month: "short" })
   const fromClock = parts(from, tz, { hour: "2-digit", minute: "2-digit" })
-  if (!to) return `${fromDay} ${fromClock} ${name}`
+  if (!to) return `${fromDay} ${fromClock}${name ? ` ${name}` : ""}`
   const toDay = parts(to, tz, { day: "numeric", month: "short" })
   const toClock = parts(to, tz, { hour: "2-digit", minute: "2-digit" })
-  if (fromDay === toDay) return `${fromDay} ${fromClock}–${toClock} ${name}`
-  return `${fromDay} ${fromClock} – ${toDay} ${toClock} ${name}`
+  const suffix = name ? ` ${name}` : ""
+  if (fromDay === toDay) return `${fromDay} ${fromClock}–${toClock}${suffix}`
+  return `${fromDay} ${fromClock} – ${toDay} ${toClock}${suffix}`
 }
 
 export type Relative = { text: string; past: boolean; minutes: number }
@@ -159,4 +162,13 @@ export function fmtDuration(minutes: number | null | undefined): string {
 
 export function compareIso(a: string | null | undefined, b: string | null | undefined): number {
   return String(a ?? "").localeCompare(String(b ?? ""))
+}
+
+/** "Thu 22 Oct 12:00 CEST": a local time with its zone's short name, for times that belong to a place. UTC stays unmarked. */
+export function fmtLocal(value: string | null | undefined, zone: string | null | undefined): string {
+  const date = parse(value)
+  if (!date) return ""
+  const tz = safeZone(zone)
+  const text = parts(date, tz, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).replace(",", "")
+  return tz === "UTC" ? text : `${text} ${zoneName(date, tz)}`
 }

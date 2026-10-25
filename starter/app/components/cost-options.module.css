@@ -1,0 +1,18 @@
+/* Cost options side by side; both look equal unless one is recommended for a key account. */
+.options { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 14px; }
+.option { display: grid; gap: 8px; align-content: start; padding: 14px; border: 1px solid #c4d3c8; border-radius: 10px; background: var(--birch); }
+.option header { display: flex; gap: 6px; }
+.recommended { border-color: #63846b; box-shadow: inset 0 0 0 1px #63846b; }
+.chosen { background: #eef4ef; }
+.tag { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; background: var(--hair-soft); font-size: 11.5px; font-weight: 600; color: var(--brown); }
+.recommendation { font-size: 12.5px !important; font-weight: 500; color: #294c3c !important; }
+.what { font-size: 14px !important; font-weight: 500; color: var(--ink) !important; }
+.option dl { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 4px 8px; margin: 0; font-size: 13px; }
+.option dt { color: var(--muted); }
+.option dd { margin: 0; color: var(--brown); }
+.late { color: var(--orange-ink) !important; }
+.only { display: grid; align-content: center; gap: 4px; padding: 14px; border: 1px dashed var(--sand); border-radius: 10px; }
+.small { font-size: 12.5px !important; color: var(--muted) !important; }
+.decided { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: #e5eee6; display: grid; gap: 6px; justify-items: start; }
+.next { font-size: 14px; }
+.kind { display: inline-block; margin-right: 6px; font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--subtle); }

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { loadOrder } from "@/lib/present/load"
 import { buildRecordView } from "@/lib/present/record"
+import { caseStatements } from "@/lib/present/statements"
+import { controlStateFor } from "@/lib/present/control-table"
+import { namesFor, partiesFor } from "@/lib/present/names"
 import { desc, eq } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { agentProposalFeedback } from "@/lib/schema"
@@ -20,5 +23,12 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   return NextResponse.json({
     order, customer, pickup, delivery, pickupSite, deliverySite, items, drivers, alerts, conversations: threads, messages, events,
     related, bundleOrderRefs, view, agentFeedback,
+    // Facts, the agent's readings and suggestions, kept apart for the case summary and the proposal card.
+    statements: caseStatements(bundle, order.agentProposal),
+    // The same section the control table shows for this order, so the two never disagree.
+    control: await controlStateFor(id),
+    // Names for ids in the agent's text (shown instead of the ids), and everyone a follow-up can ask.
+    names: namesFor(bundle, [JSON.stringify(order.agentProposal ?? ""), order.waitingOnDescription]),
+    parties: partiesFor(bundle),
   })
 }

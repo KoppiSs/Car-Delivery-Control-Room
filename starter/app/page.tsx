@@ -1,17 +1,16 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import type { Overview } from "@/lib/present/types"
+import type { ControlTable } from "@/lib/present/control-table"
 import { fmtDateTime } from "@/lib/present/time"
 import { AppFrame } from "./components/app-frame"
 import { Icon } from "./components/icons"
 import { OrderDrawer } from "./components/order-drawer"
-import { ControlOrderCard } from "./components/control-order-card"
-import { REVIEW_COLUMNS, reviewType } from "@/lib/present/review"
+import { ControlTableView, DemoControls } from "./components/control-table"
 
 export default function Home() {
   const [search, setSearch] = useState("")
-  const [overview, setOverview] = useState<Overview | null>(null)
+  const [overview, setOverview] = useState<ControlTable | null>(null)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
   const [refresh, setRefresh] = useState(0)
@@ -23,18 +22,18 @@ export default function Home() {
     return () => window.removeEventListener("orders-updated", refreshOrders)
   }, [])
 
+  // The table comes whole from stored records; search filters it here.
   useEffect(() => {
     const controller = new AbortController()
-    const timer = setTimeout(() => {
-      setLoading(true)
-      setError("")
-      fetch(`/api/overview?q=${encodeURIComponent(search)}`, { signal: controller.signal })
-        .then((response) => { if (!response.ok) throw new Error("Your orders couldn't be loaded."); return response.json() as Promise<Overview> })
-        .then((data) => { setOverview(data); setLoading(false) })
-        .catch(() => { if (!controller.signal.aborted) { setError("Your orders couldn't be loaded. Please try again."); setLoading(false) } })
-    }, search ? 180 : 0)
-    return () => { clearTimeout(timer); controller.abort() }
-  }, [search, refresh])
+    setLoading(true)
+    setError("")
+    fetch("/api/control-table", { signal: controller.signal, cache: "no-store" })
+      .then((response) => { if (!response.ok) throw new Error("Your orders couldn't be loaded."); return response.json() as Promise<ControlTable> })
+      .then((data) => { setOverview(data); setLoading(false) })
+      .catch(() => { if (!controller.signal.aborted) { setError("Your orders couldn't be loaded. Please try again."); setLoading(false) } })
+    return () => controller.abort()
+  }, [refresh])
+  const total = overview ? overview.sections.review.length + overview.sections.pending.length + overview.sections.manual.length : 0
 
   return <AppFrame section="board" snapshotAt={overview?.snapshotAt}>
     <main className="control-room control-room-columns">
@@ -45,8 +44,8 @@ export default function Home() {
       </header>
       <section className="control-queue" aria-labelledby="queue-heading" aria-busy={loading}>
         <div className="control-toolbar">
-          <div><h2 id="queue-heading">Needs your attention {overview && <span className="control-count">{overview.total}</span>}</h2>
-            <p>Active risks, evidence checks and owned follow-ups</p></div>
+          <div><h2 id="queue-heading">Control table {overview && <span className="control-count">{total}</span>}</h2>
+            <p>Most urgent first within each section</p></div>
           <label className="search control-search">
             <Icon name="search" size={17} />
             <span className="sr-only">Search orders needing attention</span>
@@ -54,19 +53,13 @@ export default function Home() {
             {search && <button type="button" className="search-clear" onClick={() => setSearch("")} aria-label="Clear search">×</button>}
           </label>
         </div>
-        <div role="status" className="sr-only">{loading ? "Loading orders" : error || `${overview?.visible.length ?? 0} orders shown`}</div>
+        <div role="status" className="sr-only">{loading ? "Loading orders" : error || `${total} orders in the control table`}</div>
         {error ? <div className="control-empty" role="alert"><h3>Let’s try that again</h3><p>{error}</p><button type="button" onClick={() => setRefresh((value) => value + 1)}>Try again</button></div>
           : loading && !overview ? <div className="control-loading" aria-label="Loading orders">{[0, 1, 2].map((index) => <div className="control-placeholder" key={index} />)}</div>
-          : overview?.visible.length ? <div className="review-columns">{REVIEW_COLUMNS.map((column) => {
-            const cards = overview.visible.filter((card) => reviewType(card) === column.id)
-            return <section className={`review-column review-column-${column.id}`} key={column.id} aria-labelledby={`review-${column.id}`}>
-              <header className="review-column-head"><h3 id={`review-${column.id}`}>{column.title}<span className="control-count">{cards.length}</span></h3><p>{column.description}</p></header>
-              {cards.length ? <ul className="control-list">{cards.map((card) => <li key={card.id}><ControlOrderCard card={card} onOpen={setSelectedOrder} /></li>)}</ul>
-                : <p className="review-column-empty">No orders in this review group.</p>}
-            </section>
-          })}</div>
-          : <div className="control-empty"><span className="control-empty-icon"><Icon name={search ? "search" : "check"} size={24} /></span><h3>{search ? "No matching orders" : "Nothing needs your attention"}</h3><p>{search ? "Try a reference, car, customer or city. Search covers orders needing attention." : "There are no active risks or outstanding checks in this snapshot."}</p>{search && <button type="button" onClick={() => setSearch("")}>Clear search</button>}</div>}
-        <footer className="control-note">{overview?.snapshotAt ? `As of ${fmtDateTime(overview.snapshotAt)} · ` : ""}Fictional operations snapshot</footer>
+          : overview ? <ControlTableView table={overview} search={search} onOpen={setSelectedOrder} />
+          : null}
+        <footer className="control-note">{overview?.snapshotAt ? `Snapshot ${fmtDateTime(overview.snapshotAt)} · ` : ""}Fictional operations snapshot</footer>
+        <DemoControls now={overview?.now ?? null} onChanged={() => setRefresh((value) => value + 1)} />
       </section>
     </main>
     {selectedOrder && <OrderDrawer key={selectedOrder.id} order={selectedOrder} onDismiss={closeOrder} />}

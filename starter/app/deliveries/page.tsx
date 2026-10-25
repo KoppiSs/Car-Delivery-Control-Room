@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { DeliveryRow, useExpandedRows } from "../components/delivery-row"
 import type { DeliveriesOverview } from "@/lib/present/types"
 import { fmtDateTime } from "@/lib/present/time"
 import { groupDeliveries } from "@/lib/present/deliveries"
@@ -16,6 +17,7 @@ export default function AllDeliveries() {
   const [refresh, setRefresh] = useState(0)
   const [selectedOrder, setSelectedOrder] = useState<{ id: string; reference: string } | null>(null)
   const closeOrder = useCallback(() => setSelectedOrder(null), [])
+  const { expanded, toggle, setAll } = useExpandedRows()
 
   useEffect(() => {
     const refreshOrders = () => setRefresh((value) => value + 1)
@@ -44,7 +46,11 @@ export default function AllDeliveries() {
       </header>
       <section aria-labelledby="deliveries-heading" aria-busy={loading}>
         <div className="control-toolbar">
-          <div><h2 id="deliveries-heading">Delivery register {overview && <span className="control-count">{overview.total}</span>}</h2><p>Grouped by state · Most recently updated within each group</p></div>
+          <div><h2 id="deliveries-heading">Delivery register {overview && <span className="control-count">{overview.total}</span>}</h2><p>Grouped by state · Most recently updated within each group</p>
+            {overview && overview.visible.length > 0 && <div style={{ display: "flex", gap: 14 }}>
+              <button type="button" className="show-more" onClick={() => setAll(overview.visible.map((card) => card.id), true)}>Expand all</button>
+              <button type="button" className="show-more" onClick={() => setAll(overview.visible.map((card) => card.id), false)}>Collapse all</button>
+            </div>}</div>
           <label className="search control-search"><Icon name="search" size={17} /><span className="sr-only">Search all deliveries</span>
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find a delivery…" />
             {search && <button type="button" className="search-clear" onClick={() => setSearch("")} aria-label="Clear search">×</button>}
@@ -56,15 +62,9 @@ export default function AllDeliveries() {
           : overview?.visible.length ? <div className="delivery-groups">{groupDeliveries(overview.visible).map((group) => <section className="delivery-group" key={group.state} aria-labelledby={`delivery-state-${group.state}`}>
             <header className="delivery-group-heading"><h3 id={`delivery-state-${group.state}`}>{group.title}<span className="control-count">{group.orders.length}</span></h3><span className="delivery-group-rule" /></header>
             <ul className="delivery-list">{group.orders.map((card) => <li key={card.id}>
-            <button type="button" className="delivery-row" onClick={() => setSelectedOrder({ id: card.id, reference: card.reference })} aria-label={`View delivery ${card.reference}, ${card.vehicle}`}>
-              <span className="delivery-identity"><span className="delivery-reference">{card.reference}{card.plate && ` · ${card.plate}`}</span><strong>{card.vehicle}</strong><span>{card.customer}</span></span>
-              <span className="delivery-route"><span>{card.from.city} → {card.to.city}</span><small>{card.routeKindLabel}</small></span>
-              <span className="delivery-status"><span className="chip-fact"><span className={`dot lane-${card.displayLane}`} />{card.statusLabel}</span>
-                {card.status === "follow_up" && card.waitingOnDescription && <small>Waiting on: {card.waitingOnDescription}</small>}
-              </span>
-              <Icon name="chevron" size={16} />
-            </button>
-          </li>)}</ul></section>)}</div>
+              <DeliveryRow card={card} checks={overview.checks?.[card.id]} checkedAt={overview.checkedAt ?? overview.snapshotAt}
+                expanded={expanded.has(card.id)} onToggle={() => toggle(card.id)} onOpen={() => setSelectedOrder({ id: card.id, reference: card.reference })} />
+            </li>)}</ul></section>)}</div>
           : <div className="control-empty"><h3>{search ? "No matching deliveries" : "No deliveries yet"}</h3><p>{search ? "Try a reference, car, customer, city or status." : "Deliveries will appear here when they are recorded."}</p>{search && <button type="button" onClick={() => setSearch("")}>Clear search</button>}</div>}
         <footer className="control-note">{overview?.snapshotAt ? `As of ${fmtDateTime(overview.snapshotAt)} · ` : ""}Delivery details are read only in this view</footer>
       </section>

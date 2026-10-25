@@ -98,6 +98,7 @@ ul, ol { padding: 0; list-style: none; }
 .nav-link:hover { background: var(--canvas); color: var(--ink); }
 .nav-link.active { background: var(--hair-soft); color: var(--ink); }
 .nav-link.active .icon { color: var(--ink); }
+.time-note { margin: 0; padding: 10px var(--gutter) 0; text-align: right; font-size: 11.5px; color: var(--subtle); }
 .sidebar-foot { margin-top: auto; padding: 0 10px; font-size: 12px; line-height: 1.5; color: var(--subtle); }
 .main { min-width: 0; display: flex; flex-direction: column; }
 .app-board .main { height: 100dvh; min-height: 0; }
@@ -584,6 +585,18 @@ details.more > :not(summary) { margin-top: 8px; }
 .agent-edit-form label { font-size: 13px; font-weight: 500; }
 .agent-edit-form textarea, .agent-edit-form select { width: 100%; border: 1px solid #bccdc1; border-radius: 8px; padding: 10px 12px; background: var(--birch); font: inherit; color: var(--ink); }
 .agent-edit-form textarea { resize: vertical; }
+.agent-line-input { width: 100%; border: 1px solid #bccdc1; border-radius: 8px; padding: 9px 12px; background: var(--birch); font: inherit; color: var(--ink); }
+.agent-your-version { padding: 16px; border: 1px dashed #bccdc1; border-radius: 10px; background: var(--birch); }
+.agent-your-version h3 { margin: 0; }
+.agent-ids { margin-top: 10px; font-size: 12px; color: #607368; }
+.agent-ids summary { cursor: pointer; }
+.manual-records { list-style: none !important; padding-left: 0 !important; gap: 4px !important; }
+.manual-records time { margin-right: 6px; font-size: 12px; color: #607368; }
+.manual-ending { display: grid; gap: 8px; margin: 4px 0 0; padding: 0; border: 0; }
+.manual-ending legend { margin-bottom: 4px; font-size: 13px; font-weight: 500; }
+.manual-ending label { display: grid; grid-template-columns: 18px 1fr; gap: 2px 8px; align-items: start; font-size: 14px; font-weight: 500; cursor: pointer; }
+.manual-ending small { grid-column: 2; font-size: 12px; font-weight: 400; color: #607368; line-height: 1.5; }
+.agent-ids ul { margin-top: 6px; padding-left: 0 !important; list-style: none !important; gap: 2px !important; }
 .agent-edit-form .agent-actions { margin-top: 4px; }
 .agent-inline-error { padding: 12px; margin-bottom: 18px; border-radius: 8px; background: var(--orange-bg); }
 .agent-loading-message { margin-top: 18px; }

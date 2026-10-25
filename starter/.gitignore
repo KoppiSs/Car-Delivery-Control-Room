@@ -7,3 +7,7 @@ next-env.d.ts
 .env
 .env.*
 !.env.example
+
+project.zip
+test-results/
+playwright-report/

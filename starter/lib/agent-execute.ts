@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { agentMockActions, agentProposalFeedback, alerts, operationalEvents, orders } from "@/lib/schema"
 import { isExecutableAgentProposal, isExternalWaitingDescription, type ExecutableToolCall, type AgentProposal } from "./agent"
 import { AgentReviewConflict, sameJson, sameProposal } from "./agent-store"
+import { nextActionTime } from "./clock"
 
 export async function executeMockResolution(orderId: string, action: ExecutableToolCall, waitingOnDescription: string, expected?: AgentProposal) {
   return db.transaction(async (tx) => {
@@ -33,29 +34,31 @@ export async function executeMockResolution(orderId: string, action: ExecutableT
       && sameProposal(proposal, override.replacementProposal) ? override.correction : undefined)) {
       throw new AgentReviewConflict("The waiting description contains editing instructions. Revise the proposal to name the external event before approving.")
     }
-    const active = await tx.select().from(alerts).where(and(eq(alerts.orderId, orderId),
-      inArray(alerts.status, ["OPEN", "ACKNOWLEDGED"]))).for("update")
-    const now = new Date()
+    // Approving a follow-up action does not fix the problem, so alerts keep their status.
+    // The approval is recorded with the alert ids it was made against.
+    const active = await tx.select({ id: alerts.id, status: alerts.status }).from(alerts).where(and(eq(alerts.orderId, orderId),
+      inArray(alerts.status, ["OPEN", "ACKNOWLEDGED"])))
+    const now = await nextActionTime(tx)
     const eventId = `evt-${randomUUID()}`
     const actionId = `mock-${randomUUID()}`
-    const resolvedAlertIds = active.map((alert) => alert.id)
-    const reason = "Operator approved a mocked follow-up action; the order is waiting for the recorded external event."
+    const linkedAlertIds = active.map((alert) => alert.id)
+    const resolvedAlertIds: string[] = []
     await tx.insert(agentMockActions).values({ id: actionId, orderId, actionType: action.action_type,
       payload: action.payload, waitingOnDescription, eventId, createdAt: now })
     await tx.insert(operationalEvents).values({ id: eventId, orderId, command: "agent.follow_up_started",
       targetType: "mock_action", targetId: actionId, recordedAt: now, details: {
         actor_type: "operator", actor_id: "operator", source: "control_room_mock", simulated: true,
         from_state: order.status, to_state: "follow_up",
-        changes: { action, waiting_on_description: waitingOnDescription, mock_action_id: actionId,
-          resolved_alert_ids: resolvedAlertIds, resolution_reason: reason },
+        changes: { action, waiting_on_description: waitingOnDescription, mock_action_id: actionId, linked_alert_ids: linkedAlertIds },
+      } })
+    await tx.insert(operationalEvents).values({ id: `evt-${randomUUID()}`, orderId, command: "agent.action_approved",
+      targetType: "mock_action", targetId: actionId, recordedAt: now, details: {
+        actor_type: "operator", actor_id: "operator", source: "control_room_mock", simulated: true,
+        changes: { mock_action_id: actionId, action_type: action.action_type, linked_alert_ids: linkedAlertIds,
+          alert_statuses: Object.fromEntries(active.map((alert) => [alert.id, alert.status])) },
       } })
     await tx.insert(agentProposalFeedback).values({ id: `feedback-${randomUUID()}`, orderId,
       decision: "APPROVE", previousProposal: proposal, outcome: "MOCK_EXECUTED", createdAt: now, completedAt: now })
-    for (const alert of active) {
-      await tx.update(alerts).set({ status: "RESOLVED", details: { ...alert.details, status: "RESOLVED",
-        resolved_at: now.toISOString(), resolution_reason: reason, resolution_event_id: eventId,
-        resolution_kind: "MOCK_FOLLOW_UP", followup_previous_status: alert.status, simulated: true } }).where(eq(alerts.id, alert.id))
-    }
     await tx.update(orders).set({ status: "follow_up", agentProposal: null, waitingOnDescription,
       agentDecision: "APPROVED", agentDecisionAt: now, agentRevision: order.agentRevision + 1, updatedAt: now }).where(eq(orders.id, orderId))
     return { success: true, simulated: true, status: "follow_up", actionId, eventId, waiting_on_description: waitingOnDescription,
