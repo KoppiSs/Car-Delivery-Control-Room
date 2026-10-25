@@ -20,6 +20,7 @@ import { loadBoardBundles, loadOrder } from "./load"
 import { readingFor } from "./statements"
 import { followUpRecipient } from "../follow-up-reply"
 import { namesFor, partiesFor, withNames } from "./names"
+import { SCAN_COMMANDS, plainIssue, scanIssue } from "../scan"
 
 /** When a request we are waiting on goes back to "Needs a decision" as "No reply yet". */
 export const WAITING_LIMITS = {
@@ -44,7 +45,7 @@ const HOUR = 3_600_000
 /** At most one box per order. Manual control beats Pending, which beats Needs a review. */
 export type ControlSection = "review" | "pending" | "manual"
 export type Urgency = "Now" | "Today" | "Later"
-export type ControlFlag = { kind: "new_reply" | "no_reply" | "agreed" | "declined" | "replied"; text: string; at: string | null }
+export type ControlFlag = { kind: "new_reply" | "no_reply" | "agreed" | "declined" | "replied" | "found_by_agent" | "agent_unsure"; text: string; at: string | null }
 export type ControlWaiting = { who: string; about: string; since: string; needBy: { at: string; label: string } | null }
 
 export type ControlRow = {
@@ -68,7 +69,11 @@ export type ControlRow = {
 }
 
 /** Where an order stands, also for orders that are not in the table. */
-export type ControlState = { row: ControlRow | null; note: string }
+/** A possible problem with no alert, not yet in a box: shown in the warning strip above the boxes. */
+export type ScanRow = { id: string; reference: string; vehicle: string; issue: string; deadline: { at: string; label: string } | null
+  status: "Not checked yet" | "Checking" }
+
+export type ControlState = { row: ControlRow | null; note: string; scan?: ScanRow }
 
 export const SECTION_LABELS: Record<ControlSection, string> = {
   review: "Needs a review", pending: "Pending", manual: "Manual control",
@@ -88,6 +93,8 @@ type Supplement = {
   seen: Map<string, Date>
   /** When manual control last ended; anything we were waiting for before that is closed. */
   manualEnded: Map<string, { at: Date; choice: string | null; note: string | null }>
+  /** The latest scan event per order. */
+  scans: Map<string, { command: string; at: Date; changes: Record<string, unknown> }>
   mock: Map<string, typeof agentMockActions.$inferSelect>
 }
 
@@ -98,7 +105,7 @@ async function loadSupplement(orderIds: string[]): Promise<Supplement> {
   const threads = await db.select().from(conversations).where(and(inArray(conversations.channel, EMAIL_CHANNELS),
     sql`(${inArray(conversations.orderId, ids)} or ${related})`))
   const threadIds = threads.map((thread) => thread.id)
-  const [threadMessageRows, applied, seen, mocks, manualEnded] = await Promise.all([
+  const [threadMessageRows, applied, seen, mocks, manualEnded, scans] = await Promise.all([
     threadIds.length ? db.select().from(messages).where(inArray(messages.conversationId, threadIds)) : Promise.resolve([]),
     db.select({ at: operationalEvents.recordedAt, messageId: sql<string>`${operationalEvents.details} -> 'changes' ->> 'message_id'` })
       .from(operationalEvents).where(and(eq(operationalEvents.command, SLOT_CHANGE_COMMAND), inArray(operationalEvents.orderId, ids))),
@@ -107,13 +114,24 @@ async function loadSupplement(orderIds: string[]): Promise<Supplement> {
     db.select().from(agentMockActions).where(inArray(agentMockActions.orderId, ids)).orderBy(desc(agentMockActions.createdAt)),
     db.select({ orderId: operationalEvents.orderId, at: operationalEvents.recordedAt, details: operationalEvents.details }).from(operationalEvents)
       .where(and(eq(operationalEvents.command, "manual_control.ended"), inArray(operationalEvents.orderId, ids))).orderBy(desc(operationalEvents.recordedAt)),
+    db.select({ orderId: operationalEvents.orderId, command: operationalEvents.command, at: operationalEvents.recordedAt, details: operationalEvents.details })
+      .from(operationalEvents).where(and(inArray(operationalEvents.command, SCAN_COMMANDS), inArray(operationalEvents.orderId, ids)))
+      .orderBy(desc(operationalEvents.recordedAt), desc(operationalEvents.id)),
   ])
+  const latestScans = new Map<string, { command: string; at: Date; changes: Record<string, unknown> }>()
+  for (const row of scans) {
+    // A result recorded at the same time as its start wins over the start.
+    const current = latestScans.get(row.orderId)
+    if (!current || (current.at.getTime() === row.at.getTime() && current.command === "agent.scan_started" && row.command !== "agent.scan_started")) {
+      latestScans.set(row.orderId, { command: row.command, at: new Date(row.at), changes: (row.details.changes ?? {}) as Record<string, unknown> })
+    }
+  }
   const threadMessages = new Map<string, (typeof messages.$inferSelect)[]>()
   for (const message of threadMessageRows) threadMessages.set(message.conversationId, [...(threadMessages.get(message.conversationId) ?? []), message])
   for (const list of threadMessages.values()) list.sort((a, b) => a.authoredAt.getTime() - b.authoredAt.getTime() || a.id.localeCompare(b.id))
   const mock = new Map<string, typeof agentMockActions.$inferSelect>()
   for (const action of mocks) if (!mock.has(action.orderId)) mock.set(action.orderId, action)
-  return { threads, threadMessages, applied, seen: new Map(seen.map((row) => [row.orderId, new Date(row.at)])), mock,
+  return { threads, threadMessages, applied, seen: new Map(seen.map((row) => [row.orderId, new Date(row.at)])), mock, scans: latestScans,
     // The latest ending per order (rows come newest first).
     manualEnded: new Map([...manualEnded].reverse().map((row) => {
       const changes = (row.details.changes ?? {}) as Record<string, unknown>
@@ -201,7 +219,10 @@ function stateFor(bundle: Bundle, supplement: Supplement, now: Date): ControlSta
       && waited(item) >= WAITING_LIMITS.minimumWaitMinutes * 60_000)
   // Ending manual control closes whatever we were waiting for before it.
   const ended = supplement.manualEnded.get(id)
-  const manualEndedAt = ended?.at.getTime() ?? 0
+  // A scan result has dealt with the question it asked and the answer it read; so has ending manual control.
+  const scan = supplement.scans.get(id)
+  const scanDone = scan && scan.command !== "agent.scan_started" ? scan : null
+  const manualEndedAt = Math.max(ended?.at.getTime() ?? 0, scanDone?.at.getTime() ?? 0)
   // Closed by a person: "Problem solved" ends it, unless something new happens afterwards.
   const closedByOperator = ended?.choice === "solved"
     && !activeAlerts.some((alert) => Date.parse(alert.triggeredAt) > manualEndedAt)
@@ -235,6 +256,14 @@ function stateFor(bundle: Bundle, supplement: Supplement, now: Date): ControlSta
       section = "review"
       flag = { kind: "no_reply", at: null, text: `No reply yet${waiting.who ? ` from ${waiting.who}` : ""}: still waiting for ${waiting.about}` }
     } else section = "pending"
+  } else if (scanDone?.command === "agent.scan_escalated") {
+    section = "review"
+    const unsure = scanDone.changes.kind === "unsure"
+    flag = { kind: unsure ? "agent_unsure" : "found_by_agent", at: scanDone.at.toISOString(),
+      text: `${unsure ? "Agent couldn't confirm" : "No alert, found by agent"}: ${String(scanDone.changes.reason ?? "")}` }
+  } else if (scanDone?.command === "agent.scan_cleared" && !activeAlerts.some((alert) => Date.parse(alert.triggeredAt) > scanDone.at.getTime())) {
+    const sources = Array.isArray(scanDone.changes.sources) ? (scanDone.changes.sources as unknown[]).filter((entry): entry is string => typeof entry === "string") : []
+    note = `Checked ${scanDone.at.toISOString().slice(11, 16)}: ${String(scanDone.changes.reason ?? "nothing wrong found")}${sources.length ? ` · Sources: ${sources.join("; ")}` : ""}`
   } else if (closedByOperator) {
     note = `Closed by operator ${ended!.at.toISOString().slice(11, 16)}: ${ended!.note ?? "problem solved"}`
   } else if (settled) {
@@ -253,7 +282,13 @@ function stateFor(bundle: Bundle, supplement: Supplement, now: Date): ControlSta
   }
 
   if (!section) {
-    return { row: null, note: note || (assessment.classification === "agent_investigate" ? `The agent is checking: ${failed[0] ? readingFor(failed[0]) : "open questions"}`
+    // A possible problem with no alert that nobody has looked at: the warning strip, never silently dropped.
+    const issue = note ? null : scanIssue(bundle, assessment)
+    const strip: ScanRow | undefined = issue ? { id, reference: bundle.order.reference, vehicle: card.vehicle, issue: plainIssue(issue, bundle),
+      deadline: issue.deadline ? { at: issue.deadline.at, label: issue.deadline.label } : assessment.deadline ? { at: assessment.deadline.at, label: assessment.deadline.label } : null,
+      status: scan?.command === "agent.scan_started" ? "Checking" : "Not checked yet" } : undefined
+    return { row: null, scan: strip, note: note || (strip ? `Possible problem with no alert: ${strip.issue}`
+      : assessment.classification === "agent_investigate" ? `The agent is checking: ${failed[0] ? readingFor(failed[0]) : "open questions"}`
       : "Nothing needs a person") }
   }
 
@@ -311,6 +346,8 @@ export type ControlTable = {
   snapshotAt: string | null
   sections: Record<ControlSection, ControlRow[]>
   waitingCloseToDeadline: number
+  /** Possible problems with no alert, for the warning strip. */
+  strip: ScanRow[]
 }
 
 export async function controlTable(): Promise<ControlTable> {
@@ -325,6 +362,8 @@ export async function controlTable(): Promise<ControlTable> {
       pending: waiting,
       manual: rows.filter((row) => row.section === "manual").sort(byUrgency),
     },
+    strip: [...states.values()].map((state) => state.scan).filter((row): row is ScanRow => !!row)
+      .sort((a, b) => (a.deadline?.at ?? "9").localeCompare(b.deadline?.at ?? "9") || a.reference.localeCompare(b.reference)),
     waitingCloseToDeadline: waiting.filter((row) => row.deadline
       && Date.parse(row.deadline.at) - now.getTime() < WAITING_LIMITS.closeWithinHours * HOUR).length,
   }

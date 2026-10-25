@@ -15,7 +15,7 @@ export const ACTION_STEP_MINUTES = 2
 export const CLOCK_ACTIONS = [
   "customer_email.sent_simulated", "customer_email.reply_simulated", "customer_email.call_logged",
   "order.slot_change_simulated", "agent.follow_up_started", "agent.action_approved", "agent.follow_up_reply_simulated",
-  "manual_control.started", "manual_control.ended", "manual.note_added", "manual.resolution_recorded", "operator.cost_option_chosen", "agent.proposal_rejected", "agent.proposal_revised",
+  "manual_control.started", "manual_control.ended", "manual.note_added", "manual.resolution_recorded", "operator.cost_option_chosen", "agent.proposal_rejected", "agent.proposal_revised", "agent.scan_started", "agent.scan_cleared", "agent.scan_escalated",
 ]
 
 /**

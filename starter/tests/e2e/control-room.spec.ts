@@ -9,7 +9,8 @@ import { expect, test, type Page } from "@playwright/test"
 import postgres from "postgres"
 
 const sql = postgres(process.env.DATABASE_URL ?? "", { max: 1 })
-const ORDERS = ["ord-00399", "ord-00299", "ord-00710"]
+// The last case scans every order in the warning strip, so all of them are saved and restored.
+const ORDERS = ["ord-00399", "ord-00299", "ord-00710", "ord-00075", "ord-00405", "ord-00439", "ord-00656", "ord-00806", "ord-01013"]
 const TABLES = ["messages", "conversations", "agent_mock_actions", "agent_proposal_feedback", "operational_events"] as const
 const FIXTURE = {
   investigation_summary: [{ text: "The driver says they cannot reach the pickup in time.", source_event_ids: [] }],
@@ -187,4 +188,34 @@ test("Reject, the model fails → 'Couldn't make a new suggestion' with Try agai
   const error = page.getByRole("alert").filter({ hasText: "Couldn't make a new suggestion: the local model could not be reached." })
   await expect(error).toBeVisible()
   for (const name of ["Try again", "Edit", "Take over"]) await expect(error.getByRole("button", { name, exact: true })).toBeVisible()
+})
+
+test("Possible problems with no alert: Check all → CD-420806 cleared, CD-420439 and CD-421013 escalated", async ({ page }) => {
+  // Verdicts by order reference; orders without a scripted driver reply are only asked, with no model call.
+  await stubModel(
+    { key: "CD-420806", response: JSON.stringify({ verdict: "fine", reason: "driver reported position, ETA inside promise" }) } as never,
+    { key: "CD-421013", response: JSON.stringify({ verdict: "unsure", reason: "the driver gave no arrival time" }) } as never,
+    { key: "CD-420710", response: JSON.stringify({ verdict: "needs_person", reason: "no margin left before the promise ends" }) } as never,
+  )
+  await page.goto("/")
+  const strip = page.locator('section[aria-labelledby="scan-strip-title"]')
+  await expect(strip.getByText(/possible problems? with no alert/)).toBeVisible()
+  await strip.getByRole("button", { name: "Check all" }).click()
+  await expect(strip.getByText("Nothing wrong: driver reported position, ETA inside promise")).toBeVisible({ timeout: 120_000 })
+  await expect(strip.getByRole("button", { name: "Check all" })).toBeEnabled({ timeout: 120_000 })
+
+  await page.goto("/")
+  const review = page.locator('section[aria-labelledby="control-review"]')
+  // Cleared: gone from the strip and from every box.
+  await expect(page.getByText("CD-420806", { exact: true })).toHaveCount(0)
+  // Found by the agent from the data (ETA after the promise), and unsure after the driver's reply.
+  await expect(review.locator("a", { hasText: "CD-420439" }).getByText(/No alert, found by agent/).first()).toBeVisible()
+  await expect(review.locator("a", { hasText: "CD-421013" }).getByText(/Agent couldn't confirm: the driver gave no arrival time/)).toBeVisible()
+  // Asked the driver, no scripted answer: Pending as usual.
+  await expect(page.locator('section[aria-labelledby="control-pending"]').getByText("CD-420075", { exact: true })).toBeVisible()
+
+  const events = await sql`select command from operational_events where order_id = 'ord-00806' and command like 'agent.scan_%' order by recorded_at`
+  expect(events.map((row) => row.command)).toEqual(["agent.scan_started", "agent.scan_cleared"])
+  await page.goto("/deliveries")
+  await expect(page.getByText(/Checked \d\d:\d\d: driver reported position, ETA inside promise · Sources: Driver/)).toBeVisible()
 })

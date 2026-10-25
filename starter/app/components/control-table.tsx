@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import type { ControlRow, ControlSection, ControlTable as Table } from "@/lib/present/control-table"
+import type { ControlRow, ControlSection, ControlTable as Table, ScanRow } from "@/lib/present/control-table"
 import { fmtClock, fmtDateTime, fmtLong } from "@/lib/present/time"
 import { Icon } from "./icons"
 import styles from "./control-table.module.css"
@@ -12,6 +12,58 @@ const SECTIONS: { id: ControlSection; title: string; description: string; empty:
   { id: "pending", title: "Pending", description: "A person approved a step that asks someone something. Back to review when they answer or time runs short.", empty: "Nothing here" },
   { id: "manual", title: "Manual control", description: "An operator took over. It stays here until they end manual control.", empty: "Nothing here" },
 ]
+
+const FLAG_WORDS: Record<NonNullable<ControlRow["flag"]>["kind"], string> = {
+  new_reply: "New reply", no_reply: "No reply yet", agreed: "Agreed", declined: "Declined", replied: "Replied",
+  found_by_agent: "No alert, found by agent", agent_unsure: "Agent couldn't confirm",
+}
+
+/**
+ * Possible problems with no alert. Collapsed by default. Nothing runs on page load: the local model is slow,
+ * so a person starts the check, for all ("Check all", one order at a time) or for one order.
+ */
+function ScanStrip({ rows, now, onOpen, onChanged }: { rows: ScanRow[]; now: string; onOpen: (order: { id: string; reference: string }) => void; onChanged: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [running, setRunning] = useState<string | null>(null)
+  const [results, setResults] = useState<Record<string, string>>({})
+  if (!rows.length) return null
+  async function check(row: ScanRow) {
+    setRunning(row.id)
+    try {
+      const response = await fetch(`/api/orders/${encodeURIComponent(row.id)}/scan`, { method: "POST", signal: AbortSignal.timeout(300_000) })
+      const result = await response.json().catch(() => ({}))
+      const text = !response.ok ? "Agent couldn't check it; try again"
+        : result.outcome === "cleared" ? `Nothing wrong: ${result.reason}`
+        : result.outcome === "asked_driver" ? `Asked ${result.driver}, waiting`
+        : result.outcome === "escalated" ? (result.kind === "unsure" ? `Agent couldn't confirm: ${result.reason}` : `Needs a person: ${result.reason}`)
+        : "Nothing to check any more"
+      setResults((current) => ({ ...current, [row.id]: text }))
+    } catch { setResults((current) => ({ ...current, [row.id]: "Agent couldn't check it; try again" })) }
+    finally { setRunning(null) }
+  }
+  async function checkAll() {
+    setOpen(true)
+    for (const row of rows) await check(row)
+    onChanged()
+  }
+  return <section className={styles.strip} aria-labelledby="scan-strip-title">
+    <header>
+      <button type="button" className={styles.toggle} aria-expanded={open} onClick={() => setOpen(!open)}>
+        <Icon name="chevron" size={14} /><span id="scan-strip-title">⚠ {rows.length} possible problem{rows.length === 1 ? "" : "s"} with no alert</span>
+      </button>
+      <button type="button" className={`agent-secondary ${styles.small}`} disabled={running !== null} onClick={() => void checkAll()}>
+        {running ? "Checking…" : "Check all"}</button>
+    </header>
+    {open && <ul className={styles.stripRows}>{rows.map((row) => <li key={row.id}>
+      <button type="button" className={styles.stripRef} onClick={() => onOpen({ id: row.id, reference: row.reference })}>{row.reference}</button>
+      <span className={styles.stripCar}>{row.vehicle}</span>
+      <span className={styles.stripIssue}>{row.issue}</span>
+      <span className={styles.muted}>{row.deadline ? <span title={`${row.deadline.label}: ${fmtLong(row.deadline.at)}`}>{row.deadline.label} {until(row.deadline.at, now)}</span> : "No deadline recorded"}</span>
+      <span className={styles.stripStatus} role="status">{running === row.id ? "Checking…" : results[row.id] ?? row.status}</span>
+      <button type="button" className="show-more" disabled={running !== null} onClick={() => void check(row).then(onChanged)}>Ask the agent to check</button>
+    </li>)}</ul>}
+  </section>
+}
 
 /** Red, yellow or green, always with the word. */
 const URGENCY_WORDS = { Now: "Urgent", Today: "Not urgent", Later: "Calm" } as const
@@ -37,7 +89,7 @@ function Row({ row, now, onOpen }: { row: ControlRow; now: string; onOpen: (orde
     <div className={styles.top}>
       <span className={styles.urgency} title={`Priority ${row.priority}`}><span className={styles[`dot${row.urgency}`]} />{URGENCY_WORDS[row.urgency]} · {row.urgency}</span>
       {row.flag && <span className={`${styles.flag} ${styles[row.flag.kind]}`}>
-        {row.flag.kind === "new_reply" ? "New reply" : row.flag.kind === "no_reply" ? "No reply yet" : row.flag.kind === "agreed" ? "Agreed" : "Declined"}
+        {FLAG_WORDS[row.flag.kind]}
         {row.flag.at && <> · <time dateTime={row.flag.at} title={fmtLong(row.flag.at)}>{fmtClock(row.flag.at)}</time></>}
       </span>}
       <span className="control-reference">{row.reference}</span>
@@ -63,13 +115,15 @@ function Row({ row, now, onOpen }: { row: ControlRow; now: string; onOpen: (orde
   </Link>
 }
 
-export function ControlTableView({ table, search, onOpen }: { table: Table; search: string; onOpen: (order: { id: string; reference: string }) => void }) {
+export function ControlTableView({ table, search, onOpen, onChanged }: { table: Table; search: string; onOpen: (order: { id: string; reference: string }) => void; onChanged: () => void }) {
   const pendingCount = table.sections.pending.length
   const [pendingOpen, setPendingOpen] = useState<boolean | null>(null)
   const query = search.trim().toLowerCase()
   const match = (row: ControlRow) => !query || [row.reference, row.vehicle, row.customer, row.from, row.to].some((field) => field.toLowerCase().includes(query))
 
-  return <div className={styles.sections}>
+  return <>
+  <ScanStrip rows={table.strip} now={table.now} onOpen={onOpen} onChanged={onChanged} />
+  <div className={styles.sections}>
     {SECTIONS.map((section) => {
       const rows = table.sections[section.id].filter(match)
       const collapsible = section.id === "pending" && pendingCount > 5
@@ -88,6 +142,7 @@ export function ControlTableView({ table, search, onOpen }: { table: Table; sear
       </section>
     })}
   </div>
+  </>
 }
 
 /** Small, clearly separate controls for running the demo. They change only the shared business clock. */

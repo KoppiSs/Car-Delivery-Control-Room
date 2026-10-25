@@ -41,3 +41,18 @@
 .dotNow { background: var(--red); }
 .dotToday { background: var(--urgency-yellow, #d9a21b); }
 .dotLater { background: var(--green); }
+
+/* Possible problems with no alert: a quiet amber strip above the boxes. */
+.strip { margin: 0 2px 18px; padding: 10px 14px; border-radius: 10px; background: #fff6e0; border-left: 3px solid var(--urgency-yellow, #d9a21b); }
+.strip header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.strip header .toggle { font-size: 14px; font-weight: 500; color: #7a5a00; }
+.strip .small { padding: 6px 12px; font-size: 12.5px; }
+.stripRows { display: grid; gap: 6px; margin-top: 10px; padding: 0; list-style: none; }
+.stripRows li { display: grid; grid-template-columns: 96px minmax(120px, 1fr) minmax(180px, 2fr) minmax(140px, 1fr) minmax(140px, 1.2fr) auto; gap: 4px 12px; align-items: baseline; padding: 6px 0; border-top: 1px solid rgba(217, 162, 27, .25); font-size: 13px; }
+.stripRef { padding: 0; border: 0; background: transparent; font: inherit; font-size: 12.5px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; text-align: left; }
+.stripCar { font-weight: 500; }
+.stripIssue { color: var(--brown); }
+.stripStatus { color: #7a5a00; }
+@media (max-width: 900px) { .stripRows li { grid-template-columns: 1fr; } }
+
+.found_by_agent, .agent_unsure { background: var(--orange-bg); color: var(--orange-ink); }

@@ -56,7 +56,7 @@ export default function Home() {
         <div role="status" className="sr-only">{loading ? "Loading orders" : error || `${total} orders in the control table`}</div>
         {error ? <div className="control-empty" role="alert"><h3>Let’s try that again</h3><p>{error}</p><button type="button" onClick={() => setRefresh((value) => value + 1)}>Try again</button></div>
           : loading && !overview ? <div className="control-loading" aria-label="Loading orders">{[0, 1, 2].map((index) => <div className="control-placeholder" key={index} />)}</div>
-          : overview ? <ControlTableView table={overview} search={search} onOpen={setSelectedOrder} />
+          : overview ? <ControlTableView table={overview} search={search} onOpen={setSelectedOrder} onChanged={() => setRefresh((value) => value + 1)} />
           : null}
         <footer className="control-note">{overview?.snapshotAt ? `Snapshot ${fmtDateTime(overview.snapshotAt)} · ` : ""}Fictional operations snapshot</footer>
         <DemoControls now={overview?.now ?? null} onChanged={() => setRefresh((value) => value + 1)} />

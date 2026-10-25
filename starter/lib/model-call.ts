@@ -10,10 +10,12 @@ export const MODEL_STUB_COLLECTION = "demo_model_stub"
 
 export type ModelResult = { ok: true; output: unknown } | { ok: false; reason: string }
 
-async function takeStub(): Promise<ModelResult | null> {
+/** The next queued stub; one with details.key only answers a call made with that key (e.g. an order reference). */
+async function takeStub(key?: string): Promise<ModelResult | null> {
   if (process.env.NODE_ENV === "production") return null
-  const [stub] = await db.select().from(relatedRecords)
-    .where(and(eq(relatedRecords.collection, MODEL_STUB_COLLECTION), isNull(relatedRecords.orderId))).orderBy(asc(relatedRecords.id)).limit(1)
+  const stubs = await db.select().from(relatedRecords)
+    .where(and(eq(relatedRecords.collection, MODEL_STUB_COLLECTION), isNull(relatedRecords.orderId))).orderBy(asc(relatedRecords.id))
+  const stub = stubs.find((row) => { const k = (row.details as { key?: unknown }).key; return k === undefined || k === key })
   if (!stub) return null
   await db.delete(relatedRecords).where(and(eq(relatedRecords.collection, MODEL_STUB_COLLECTION), eq(relatedRecords.id, stub.id)))
   const d = stub.details as { response?: unknown; error?: unknown }
@@ -21,8 +23,8 @@ async function takeStub(): Promise<ModelResult | null> {
 }
 
 /** Sends one /api/generate request. Never throws: a failure comes back with a plain reason. */
-export async function generateWithModel(request: Record<string, unknown>, timeoutMs = 120_000): Promise<ModelResult> {
-  const stubbed = await takeStub()
+export async function generateWithModel(request: Record<string, unknown>, timeoutMs = 120_000, stubKey?: string): Promise<ModelResult> {
+  const stubbed = await takeStub(stubKey)
   if (stubbed) return stubbed
   try {
     const response = await fetch("http://127.0.0.1:11434/api/generate", {

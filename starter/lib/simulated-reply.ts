@@ -21,7 +21,7 @@ import { agentMockActions } from "./schema"
  * Scripted driver facts, keyed by order reference. Kept in step with the facts in
  * lib/agent/driver-sim.ts (owned by the agent code); written here as plain replies.
  */
-const SCRIPTED_DRIVER_REPLIES: Record<string, string> = {
+export const SCRIPTED_DRIVER_REPLIES: Record<string, string> = {
   "CD-420806": "Location sharing was switched off on my phone. I'm near Jyväskylä and on time.",
   "CD-421013": "I logged out of the app after the pickup. I'm on the motorway, all fine.",
 }
