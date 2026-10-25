@@ -350,6 +350,8 @@ export type MessageView = {
   language: string | null
   evidenceCount: number
   otherOrder: OrderRef | null
+  /** "Scripted reply (simulation)" and the like, for simulated replies. */
+  simulatedSource?: string | null
 }
 
 export type ThreadView = {

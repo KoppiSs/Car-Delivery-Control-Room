@@ -37,7 +37,7 @@ export function AgentProposalCard({ detail, onUpdate }: {
   // "Record what you did" entries recorded in this view before the order is reloaded.
   const [recorded, setRecorded] = useState<{ note: string; at: string }[]>([])
   // The simulated reply being written: a suggestion that answers the question, editable before recording.
-  const [replyDraft, setReplyDraft] = useState<{ from: string; question: string; text: string; quickPicks: boolean; recipientType: string } | null>(null)
+  const [replyDraft, setReplyDraft] = useState<{ from: string; question: string; text: string; quickPicks: boolean; recipientType: string; source: string } | null>(null)
   const [mode, setMode] = useState(detail.order.agentMode ?? "AGENT")
   const [manualBusy, setManualBusy] = useState(false)
   const [manualNote, setManualNote] = useState("")
@@ -155,12 +155,12 @@ export function AgentProposalCard({ detail, onUpdate }: {
   }
 
   /** Records the reply as a message from the party we asked; the follow-up ends with it. */
-  async function simulateReply(answer: ReplyPick, text: string) {
+  async function simulateReply(answer: ReplyPick, text: string, source: string) {
     if (manualBusy) return
     setManualBusy(true); setProposalError(""); setManualMessage("")
     try {
       const response = await fetch(`/api/orders/${encodeURIComponent(detail.order.id)}/follow-up-reply`, { method: "POST",
-        headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(15_000), body: JSON.stringify({ answer, text }) })
+        headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(15_000), body: JSON.stringify({ answer, text, source }) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error ?? "The reply couldn't be recorded.")
       setReplyDraft(null)
@@ -279,7 +279,8 @@ export function AgentProposalCard({ detail, onUpdate }: {
         quickPicks={replyDraft.quickPicks ? (replyDraft.recipientType === "customer"
           ? { agree: "Yes, that works for us.", decline: "That doesn't work for us, please call me." }
           : { agree: "Yes, that works.", decline: "No, we can't do that." }) : undefined}
-        onRecord={(answer, text) => void simulateReply(answer, text)} onCancel={() => setReplyDraft(null)} />
+        onRecord={(answer, text, unchanged) => void simulateReply(answer, text, answer !== "other" ? "scripted" : unchanged ? replyDraft.source : "operator")}
+        onCancel={() => setReplyDraft(null)} />
         : <div className="agent-actions">
           <button type="button" className="agent-secondary" disabled={manualBusy} onClick={() => void openReply()}>{manualBusy ? "Preparing a reply…" : "Simulate reply"}</button>
           <button type="button" className="agent-secondary" disabled={manualBusy} onClick={() => void manualUpdate("takeover")}>Take Over</button>

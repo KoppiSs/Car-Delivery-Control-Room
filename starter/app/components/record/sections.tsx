@@ -147,6 +147,7 @@ export function ThreadMessages({ thread }: { thread: ThreadView }) {
       <span>· {message.channelLabel}</span>
       {message.internal && <span className="msg-tag internal">Internal</span>}
       {message.author.kind === "agent" && <span className="msg-tag">Agent</span>}
+      {message.simulatedSource && <span className="msg-tag">{message.simulatedSource}</span>}
       {message.otherOrder && <span className="msg-tag">Filed on <OrderLink order={message.otherOrder} /></span>}
       <time dateTime={message.at}>{fmtDateTime(message.at)}</time>
     </div>

@@ -14,6 +14,7 @@ import { loadOrder } from "./present/load"
 import { partiesFor, withNames, namesFor } from "./present/names"
 import { fmtDateTime } from "./present/time"
 import { followUpRecipient } from "./follow-up-reply"
+import type { ReplySource } from "./present/names-text"
 import { readAppPositions } from "./triage-read"
 import { agentMockActions } from "./schema"
 
@@ -35,7 +36,7 @@ export type ReplySuggestion = {
   /** What we asked, in plain words. */
   question: string
   text: string
-  source: "scripted" | "model" | "template"
+  source: ReplySource
   /** Quick picks are offered for customers and sites, where the question is usually yes or no. */
   quickPicks: boolean
 }
@@ -74,7 +75,7 @@ export async function suggestFollowUpReply(orderId: string): Promise<ReplySugges
   const about = withNames(action.waitingOnDescription, names)
 
   if (party.type !== "driver") {
-    return { from: party.name, recipientType: party.type, question, quickPicks: true, source: "template",
+    return { from: party.name, recipientType: party.type, question, quickPicks: true, source: "scripted",
       text: party.type === "customer" ? "Yes, that works for us." : "Yes, that works." }
   }
   const scripted = SCRIPTED_DRIVER_REPLIES[bundle.order.reference]
@@ -97,6 +98,6 @@ export async function suggestFollowUpReply(orderId: string): Promise<ReplySugges
   }
   const generated = await driverReplyFromModel(question, facts)
   return { from: party.name, recipientType: "driver", question, quickPicks: false,
-    source: generated ? "model" : "template",
+    source: generated ? "model" : "fallback",
     text: marked(generated ?? `I got your message about ${about.toLowerCase()}. I'll check and get back to you shortly.`) }
 }

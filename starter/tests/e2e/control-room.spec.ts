@@ -11,6 +11,8 @@ import postgres from "postgres"
 const sql = postgres(process.env.DATABASE_URL ?? "", { max: 1 })
 // The last case scans every order in the warning strip, so all of them are saved and restored.
 const ORDERS = ["ord-00399", "ord-00299", "ord-00710", "ord-00075", "ord-00405", "ord-00439", "ord-00656", "ord-00806", "ord-01013"]
+/** Orders the clicks depend on must be fresh; the other strip orders are only saved and restored, whatever state they are in. */
+const MUST_BE_FRESH = new Set(["ord-00399", "ord-00299", "ord-00710", "ord-00806", "ord-00439", "ord-00075"])
 const TABLES = ["messages", "conversations", "agent_mock_actions", "agent_proposal_feedback", "operational_events"] as const
 const FIXTURE = {
   investigation_summary: [{ text: "The driver says they cannot reach the pickup in time.", source_event_ids: [] }],
@@ -35,8 +37,10 @@ test.beforeAll(async () => {
     const alerts = (await sql`select id, status, details from alerts where order_id = ${id}`) as unknown as Snapshot["alerts"]
     const [order] = await sql`select status, agent_mode, agent_decision, agent_decision_at, agent_revision, agent_proposal, waiting_on_description, updated_at
       from orders where id = ${id}`
-    expect(order.status, `${id} must not already be waiting; run npm run db:seed`).not.toBe("follow_up")
-    expect(order.agent_mode, `${id} must not be under manual control; run npm run db:seed`).toBe("AGENT")
+    if (MUST_BE_FRESH.has(id)) {
+      expect(order.status, `${id} must not already be waiting; run npm run db:seed`).not.toBe("follow_up")
+      expect(order.agent_mode, `${id} must not be under manual control; run npm run db:seed`).toBe("AGENT")
+    }
     snapshots.set(id, { rows, mocks, alerts, order })
   }
 })
@@ -67,6 +71,9 @@ async function withProposal(id: string) {
 async function expectInBox(page: Page, reference: string, box: "review" | "pending" | "manual" | "none") {
   await page.goto("/")
   await expect(page.locator(`section[aria-labelledby="control-review"]`)).toBeVisible()
+  // Pending collapses to its header when it holds more than 5 orders: open it before looking inside.
+  const collapsed = page.locator(`section[aria-labelledby="control-pending"] button[aria-expanded="false"]`)
+  if (await collapsed.count()) await collapsed.click()
   if (box !== "none") await expect(page.locator(`section[aria-labelledby="control-${box}"]`).getByText(reference, { exact: true })).toBeVisible()
   for (const other of (["review", "pending", "manual"] as const).filter((name) => name !== box)) {
     await expect(page.locator(`section[aria-labelledby="control-${other}"]`).getByText(reference, { exact: true })).toHaveCount(0)
@@ -190,7 +197,14 @@ test("Reject, the model fails → 'Couldn't make a new suggestion' with Try agai
   for (const name of ["Try again", "Edit", "Take over"]) await expect(error.getByRole("button", { name, exact: true })).toBeVisible()
 })
 
+/** Set when the scan case ran on fresh orders; the Reopen case builds on what it cleared. */
+let scanRan = false
+
 test("Possible problems with no alert: Check all → CD-420806 cleared, CD-420439 and CD-421013 escalated", async ({ page }) => {
+  // Needs orders nobody has scanned yet; someone's own "Check all" since the last seed makes this case meaningless.
+  const [{ count }] = await sql`select count(*)::int as count from operational_events where order_id in ('ord-00806', 'ord-00439') and command like 'agent.scan_%'`
+  test.skip(count > 0, "CD-420806 / CD-420439 were already scanned since the last seed; run npm run db:seed to run this case")
+  scanRan = true
   // Verdicts by order reference; orders without a scripted driver reply are only asked, with no model call.
   await stubModel(
     { key: "CD-420806", response: JSON.stringify({ verdict: "fine", reason: "driver reported position, ETA inside promise" }) } as never,
@@ -201,8 +215,9 @@ test("Possible problems with no alert: Check all → CD-420806 cleared, CD-42043
   const strip = page.locator('section[aria-labelledby="scan-strip-title"]')
   await expect(strip.getByText(/possible problems? with no alert/)).toBeVisible()
   await strip.getByRole("button", { name: "Check all" }).click()
-  await expect(strip.getByText("Nothing wrong: driver reported position, ETA inside promise")).toBeVisible({ timeout: 120_000 })
-  await expect(strip.getByRole("button", { name: "Check all" })).toBeEnabled({ timeout: 120_000 })
+  await expect(strip.getByText(/Closed by the agent\. Checked: .*“Location sharing was switched off on my phone\. I'm near Jyväskylä and on time\.” \(Scripted reply \(simulation\)\)/)).toBeVisible({ timeout: 120_000 })
+  // When every order has moved on, the strip itself disappears; wait until nothing is still being checked.
+  await expect(page.getByRole("button", { name: "Checking…" })).toHaveCount(0, { timeout: 120_000 })
 
   await page.goto("/")
   const review = page.locator('section[aria-labelledby="control-review"]')
@@ -210,12 +225,32 @@ test("Possible problems with no alert: Check all → CD-420806 cleared, CD-42043
   await expect(page.getByText("CD-420806", { exact: true })).toHaveCount(0)
   // Found by the agent from the data (ETA after the promise), and unsure after the driver's reply.
   await expect(review.locator("a", { hasText: "CD-420439" }).getByText(/No alert, found by agent/).first()).toBeVisible()
-  await expect(review.locator("a", { hasText: "CD-421013" }).getByText(/Agent couldn't confirm: the driver gave no arrival time/)).toBeVisible()
+  // CD-421013 is only checked when it was still in the strip (not already handled by someone).
+  if (snapshots.get("ord-01013")?.order.status !== "follow_up") {
+    await expect(review.locator("a", { hasText: "CD-421013" }).getByText(/Agent couldn't confirm: no app ETA on file to confirm the delivery promise · Agent's verdict: unsure/)).toBeVisible()
+  }
+  // ETA exactly at the promise end: never closed by the agent (needs 15 min margin).
+  await expect(review.locator("a", { hasText: "CD-420710" }).getByText(/No alert, found by agent: ETA only 0 min inside the promise; under 15 min/)).toBeVisible()
   // Asked the driver, no scripted answer: Pending as usual.
   await expect(page.locator('section[aria-labelledby="control-pending"]').getByText("CD-420075", { exact: true })).toBeVisible()
 
+  await expect(page.getByText("driver reported position, ETA inside promise")).toHaveCount(0)
   const events = await sql`select command from operational_events where order_id = 'ord-00806' and command like 'agent.scan_%' order by recorded_at`
   expect(events.map((row) => row.command)).toEqual(["agent.scan_started", "agent.scan_cleared"])
   await page.goto("/deliveries")
-  await expect(page.getByText(/Checked \d\d:\d\d: driver reported position, ETA inside promise · Sources: Driver/)).toBeVisible()
+  await expect(page.getByText(/Checked \d\d:\d\d: .*“Location sharing was switched off.*latest app ETA .* inside the delivery promise.* · Agent's verdict: fine · Sources: Driver/)).toBeVisible()
+})
+
+test("Closed by the agent today: the reply shows its source; Reopen moves CD-420806 to Needs a review", async ({ page }) => {
+  test.skip(!scanRan, "Builds on the scan case, which needs a fresh seed")
+  await page.goto("/")
+  const closed = page.locator("details", { hasText: /Closed by the agent today \(\d+\)/ })
+  await closed.locator("summary").click()
+  const row = closed.locator("li", { hasText: "CD-420806" })
+  await expect(row.getByText("Scripted reply (simulation)", { exact: true })).toBeVisible()
+  await row.getByRole("button", { name: "Reopen" }).click()
+  const review = page.locator('section[aria-labelledby="control-review"]')
+  await expect(review.locator("a", { hasText: "CD-420806" }).getByText("Reopened by operator after the agent had closed it", { exact: true })).toBeVisible()
+  const [event] = await sql`select command, details->>'actor_type' as actor from operational_events where order_id = 'ord-00806' and command like 'agent.scan_%' order by recorded_at desc limit 1`
+  expect({ command: event.command, actor: event.actor }).toEqual({ command: "agent.scan_reopened", actor: "operator" })
 })
