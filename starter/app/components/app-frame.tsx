@@ -9,7 +9,7 @@ const GROUPS: { label: string; links: { section: Section; href: string; label: s
   { label: "Work", links: [
     { section: "board", href: "/", label: "Control Room", icon: "car" },
     { section: "deliveries", href: "/deliveries", label: "All Deliveries", icon: "list" },
-    { section: "inbox", href: "/inbox", label: "Inbox", icon: "inbox" },
+    { section: "inbox", href: "/inbox", label: "Messages", icon: "message" },
   ] },
   { label: "People and places", links: [
     { section: "customers", href: "/customers", label: "Customers", icon: "people" },
