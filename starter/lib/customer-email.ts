@@ -346,7 +346,7 @@ export type ReplyRecorded = { orderId: string; recipientType: RecipientType | "d
  * `afterReply` runs in the same transaction, so whatever it ends is ended together with the reply or not at all.
  */
 export async function recordSimulatedReply(orderId: string, type: RecipientType, answer: ReplyKind,
-  afterReply?: (tx: Tx, reply: ReplyRecorded) => Promise<unknown>, text?: string) {
+  afterReply?: (tx: Tx, reply: ReplyRecorded) => Promise<unknown>, text?: string, source?: "scripted" | "operator") {
   const body = text?.trim() || (answer === "other" ? "" : replyText(type, answer))
   if (!body) throw new CustomerEmailError("Write the reply before recording it.", 400)
   return db.transaction(async (tx) => {
@@ -367,7 +367,7 @@ export async function recordSimulatedReply(orderId: string, type: RecipientType,
         id: messageId, body, channel: thread.channel, language: "en", order_id: orderId,
         author_id: sent.recipient_id ?? null, author_type: sent.recipient_type ?? "customer", author_name_snapshot: sent.recipient_name_snapshot ?? null,
         visibility: "PUBLIC", authored_at: at, recipient_id: OPERATOR_ID, recipient_type: "operator", conversation_id: thread.id,
-        email_recipient_type: type, simulated: true, answer,
+        email_recipient_type: type, simulated: true, answer, reply_source: source ?? (text?.trim() ? "operator" : "scripted"),
       } })
     // The recipient answered, so nobody is waiting on them any more; the thread is open for the operator.
     const { waiting_on: _waitingOn, ...rest } = thread.details
@@ -406,7 +406,7 @@ export type EmailCase = {
   templateLabel: string
   sentAt: string
   stage: EmailStage
-  reply: { answer: ReplyKind; body: string; at: string } | null
+  reply: { answer: ReplyKind; body: string; at: string; source: string | null } | null
   /** What an agreement would change. Null for templates that propose nothing. */
   change: { kind: "pickup" | "delivery" | "arrival"; from: string; to: string } | null
   applied: { at: string } | null
@@ -470,7 +470,8 @@ export function buildEmailCase(threadId: string, type: RecipientType, threadMess
   const appliedEvent = applied ? { recordedAt: applied } : null
   const thread = { id: threadId }
   const reply = replyMessage
-    ? { answer: replyMessage.details.answer as ReplyKind, body: replyMessage.body, at: iso(replyMessage.authoredAt) } : null
+    ? { answer: replyMessage.details.answer as ReplyKind, body: replyMessage.body, at: iso(replyMessage.authoredAt),
+      source: typeof replyMessage.details.reply_source === "string" ? replyMessage.details.reply_source : null } : null
   const stage: EmailStage = !reply ? (TEMPLATES[templateId].expectsReply ? "waiting" : "informed") : reply.answer === "decline" ? "declined" : reply.answer === "other" ? "replied"
     : !change ? "done" : appliedEvent ? "applied" : "agreed"
   return {

@@ -12,7 +12,7 @@ import { db } from "./db"
 import { closeFollowUpOnReply } from "./follow-up-close"
 import { loadOrder } from "./present/load"
 import { partiesFor, type Party } from "./present/names"
-import type { FollowUpRecipient } from "./present/names-text"
+import type { FollowUpRecipient, ReplySource } from "./present/names-text"
 import { agentMockActions, conversations, messages, operationalEvents, orders } from "./schema"
 
 const REPLIES: Record<"driver" | "customer" | "site", Record<ReplyAnswer, string>> = {
@@ -36,7 +36,7 @@ export function followUpRecipient(payload: Record<string, unknown>, parties: Ret
 }
 
 /** Records the reply. `text` is what the person wrote or kept from the suggestion; a quick pick fills it when empty. */
-export async function simulateFollowUpReply(orderId: string, answer: ReplyKind, text?: string) {
+export async function simulateFollowUpReply(orderId: string, answer: ReplyKind, text?: string, source: ReplySource = text ? "operator" : "scripted") {
   const loaded = await loadOrder(orderId)
   if (!loaded) throw new CustomerEmailError("Order not found.", 404)
   const parties = partiesFor(loaded.bundle)
@@ -76,7 +76,7 @@ export async function simulateFollowUpReply(orderId: string, answer: ReplyKind, 
       authoredAt: now, details: {
         id: messageId, body, channel, language: "en", order_id: orderId, author_id: party.id, author_type: party.actorType ?? kind,
         author_name_snapshot: party.name, visibility: "PUBLIC", authored_at: at, recipient_id: "ops-support", recipient_type: "operator",
-        conversation_id: threadId, simulated: true, answer, follow_up_mock_action_id: action.id,
+        conversation_id: threadId, simulated: true, answer, follow_up_mock_action_id: action.id, reply_source: source,
       } })
     await tx.insert(operationalEvents).values({ id: `evt-${randomUUID()}`, orderId, command: "agent.follow_up_reply_simulated",
       targetType: "mock_action", targetId: action.id, recordedAt: now, details: {

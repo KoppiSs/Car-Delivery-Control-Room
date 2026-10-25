@@ -20,7 +20,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const text = typeof body.text === "string" ? body.text.trim() : ""
   if (text.length > 1000 || (body.answer === "other" && !text)) return Response.json({ error: "Write a reply of 1–1000 characters." }, { status: 400 })
   try {
-    return Response.json(await recordSimulatedReply(id, recipient, body.answer, closeFollowUpOnReply, text || undefined))
+    return Response.json(await recordSimulatedReply(id, recipient, body.answer, closeFollowUpOnReply, text || undefined,
+      body.source === "scripted" || body.source === "operator" ? body.source : undefined))
   } catch (error) {
     if (error instanceof CustomerEmailError) return Response.json({ error: error.message }, { status: error.status })
     throw error

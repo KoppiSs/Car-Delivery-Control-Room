@@ -14,13 +14,14 @@ export function ReplyComposer({ from, question, initial, quickPicks, busy, onRec
   initial: string
   quickPicks?: { agree: string; decline: string }
   busy: boolean
-  onRecord: (answer: ReplyPick, text: string) => void
+  /** `unchanged`: the text is exactly the suggestion it started with, so it keeps that suggestion's source. */
+  onRecord: (answer: ReplyPick, text: string, unchanged: boolean) => void
   onCancel: () => void
 }) {
   const [text, setText] = useState(initial)
   const [answer, setAnswer] = useState<ReplyPick>(quickPicks && initial === quickPicks.agree ? "agree" : "other")
   const pick = (value: "agree" | "decline") => { if (quickPicks) { setAnswer(value); setText(quickPicks[value]) } }
-  return <form className="agent-edit-form" onSubmit={(event) => { event.preventDefault(); if (text.trim()) onRecord(answer, text.trim()) }}>
+  return <form className="agent-edit-form" onSubmit={(event) => { event.preventDefault(); if (text.trim()) onRecord(answer, text.trim(), text.trim() === initial.trim()) }}>
     <label htmlFor="simulated-reply">Simulated reply from {from}</label>
     {question && <p className="agent-approval-note">We asked: {question}</p>}
     {quickPicks && <div className="agent-actions" role="group" aria-label="Quick picks">

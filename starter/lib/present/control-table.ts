@@ -20,6 +20,7 @@ import { loadBoardBundles, loadOrder } from "./load"
 import { readingFor } from "./statements"
 import { followUpRecipient } from "../follow-up-reply"
 import { namesFor, partiesFor, withNames } from "./names"
+import { replySourceLabel, verdictText } from "./names-text"
 import { SCAN_COMMANDS, plainIssue, scanIssue } from "../scan"
 
 /** When a request we are waiting on goes back to "Needs a decision" as "No reply yet". */
@@ -45,7 +46,7 @@ const HOUR = 3_600_000
 /** At most one box per order. Manual control beats Pending, which beats Needs a review. */
 export type ControlSection = "review" | "pending" | "manual"
 export type Urgency = "Now" | "Today" | "Later"
-export type ControlFlag = { kind: "new_reply" | "no_reply" | "agreed" | "declined" | "replied" | "found_by_agent" | "agent_unsure"; text: string; at: string | null }
+export type ControlFlag = { kind: "new_reply" | "no_reply" | "agreed" | "declined" | "replied" | "found_by_agent" | "agent_unsure" | "reopened"; text: string; at: string | null }
 export type ControlWaiting = { who: string; about: string; since: string; needBy: { at: string; label: string } | null }
 
 export type ControlRow = {
@@ -73,7 +74,16 @@ export type ControlRow = {
 export type ScanRow = { id: string; reference: string; vehicle: string; issue: string; deadline: { at: string; label: string } | null
   status: "Not checked yet" | "Checking" }
 
-export type ControlState = { row: ControlRow | null; note: string; scan?: ScanRow }
+/** An order the agent closed after a scan: listed so a person can see what was checked and reopen it. */
+export type AgentClosedRow = { id: string; reference: string; vehicle: string; at: string
+  /** What was checked, built from the records. */
+  checked: string
+  /** "Agent's verdict: fine". The model's own sentence is kept in the event only. */
+  verdict: string | null
+  sources: string[]
+  reply: { body: string; at: string; from: string; source: string | null } | null }
+
+export type ControlState = { row: ControlRow | null; note: string; scan?: ScanRow; agentClosed?: AgentClosedRow }
 
 export const SECTION_LABELS: Record<ControlSection, string> = {
   review: "Needs a review", pending: "Pending", manual: "Manual control",
@@ -244,26 +254,32 @@ function stateFor(bundle: Bundle, supplement: Supplement, now: Date): ControlSta
   } else if (unseenEmailReply?.reply && Date.parse(unseenEmailReply.reply.at) > manualEndedAt) {
     section = "review"
     flag = { kind: "new_reply", at: unseenEmailReply.reply.at,
-      text: `New reply from ${unseenEmailReply.recipientName}: “${short(unseenEmailReply.reply.body, 60)}”` }
+      text: `New reply from ${unseenEmailReply.recipientName}: “${short(unseenEmailReply.reply.body, 60)}”${replySourceLabel(unseenEmailReply.reply.source) ? ` — ${replySourceLabel(unseenEmailReply.reply.source)}` : ""}` }
   } else if ((mockReply ?? typedReply) && Date.parse((mockReply ?? typedReply)!.authoredAt) > manualEndedAt) {
     section = "review"
     const reply = (mockReply ?? typedReply)!
     const author = bundle.dir.resolve(reply.details.author_id, reply.authorType)
     const name = typeof reply.details.author_name_snapshot === "string" ? reply.details.author_name_snapshot : author.name
-    flag = { kind: "new_reply", at: reply.authoredAt, text: `New reply from ${name}: “${short(reply.body, 60)}”` }
+    const source = replySourceLabel(reply.details.reply_source)
+    flag = { kind: "new_reply", at: reply.authoredAt, text: `New reply from ${name}: “${short(reply.body, 60)}”${source ? ` — ${source}` : ""}` }
   } else if (waiting) {
     if (overdue(waiting)) {
       section = "review"
       flag = { kind: "no_reply", at: null, text: `No reply yet${waiting.who ? ` from ${waiting.who}` : ""}: still waiting for ${waiting.about}` }
     } else section = "pending"
+  } else if (scanDone?.command === "agent.scan_reopened") {
+    section = "review"
+    flag = { kind: "reopened", at: scanDone.at.toISOString(), text: "Reopened by operator after the agent had closed it" }
   } else if (scanDone?.command === "agent.scan_escalated") {
     section = "review"
     const unsure = scanDone.changes.kind === "unsure"
+    const thinks = verdictText(scanDone.changes.verdict) ? ` · ${verdictText(scanDone.changes.verdict)}` : ""
     flag = { kind: unsure ? "agent_unsure" : "found_by_agent", at: scanDone.at.toISOString(),
-      text: `${unsure ? "Agent couldn't confirm" : "No alert, found by agent"}: ${String(scanDone.changes.reason ?? "")}` }
+      text: `${unsure ? "Agent couldn't confirm" : "No alert, found by agent"}: ${String(scanDone.changes.reason ?? "")}${thinks}` }
   } else if (scanDone?.command === "agent.scan_cleared" && !activeAlerts.some((alert) => Date.parse(alert.triggeredAt) > scanDone.at.getTime())) {
     const sources = Array.isArray(scanDone.changes.sources) ? (scanDone.changes.sources as unknown[]).filter((entry): entry is string => typeof entry === "string") : []
-    note = `Checked ${scanDone.at.toISOString().slice(11, 16)}: ${String(scanDone.changes.reason ?? "nothing wrong found")}${sources.length ? ` · Sources: ${sources.join("; ")}` : ""}`
+    const thinks = verdictText(scanDone.changes.verdict) ? ` · ${verdictText(scanDone.changes.verdict)}` : ""
+    note = `Checked ${scanDone.at.toISOString().slice(11, 16)}: ${String(scanDone.changes.checked ?? scanDone.changes.reason ?? "nothing wrong found")}${thinks}${sources.length ? ` · Sources: ${sources.join("; ")}` : ""}`
   } else if (closedByOperator) {
     note = `Closed by operator ${ended!.at.toISOString().slice(11, 16)}: ${ended!.note ?? "problem solved"}`
   } else if (settled) {
@@ -287,7 +303,19 @@ function stateFor(bundle: Bundle, supplement: Supplement, now: Date): ControlSta
     const strip: ScanRow | undefined = issue ? { id, reference: bundle.order.reference, vehicle: card.vehicle, issue: plainIssue(issue, bundle),
       deadline: issue.deadline ? { at: issue.deadline.at, label: issue.deadline.label } : assessment.deadline ? { at: assessment.deadline.at, label: assessment.deadline.label } : null,
       status: scan?.command === "agent.scan_started" ? "Checking" : "Not checked yet" } : undefined
-    return { row: null, scan: strip, note: note || (strip ? `Possible problem with no alert: ${strip.issue}`
+    // Closed by the agent: shown in "Closed by the agent today" with what it checked and the reply it read.
+    let agentClosed: AgentClosedRow | undefined
+    if (scanDone?.command === "agent.scan_cleared" && note) {
+      const reply = [...bundle.messages].reverse().find((message) => message.authorType === "driver"
+        && Date.parse(message.authoredAt) <= scanDone.at.getTime() && Date.parse(message.authoredAt) > Date.parse(NOW))
+      agentClosed = { id, reference: bundle.order.reference, vehicle: card.vehicle, at: scanDone.at.toISOString(),
+        checked: String(scanDone.changes.checked ?? scanDone.changes.reason ?? "nothing wrong found"),
+        verdict: verdictText(scanDone.changes.verdict),
+        sources: Array.isArray(scanDone.changes.sources) ? (scanDone.changes.sources as unknown[]).filter((entry): entry is string => typeof entry === "string") : [],
+        reply: reply ? { body: reply.body, at: reply.authoredAt, from: typeof reply.details.author_name_snapshot === "string" ? reply.details.author_name_snapshot : "The driver",
+          source: replySourceLabel(reply.details.reply_source) } : null }
+    }
+    return { row: null, scan: strip, agentClosed, note: note || (strip ? `Possible problem with no alert: ${strip.issue}`
       : assessment.classification === "agent_investigate" ? `The agent is checking: ${failed[0] ? readingFor(failed[0]) : "open questions"}`
       : "Nothing needs a person") }
   }
@@ -348,6 +376,8 @@ export type ControlTable = {
   waitingCloseToDeadline: number
   /** Possible problems with no alert, for the warning strip. */
   strip: ScanRow[]
+  /** Orders the agent closed today (business date), newest first. */
+  agentClosed: AgentClosedRow[]
 }
 
 export async function controlTable(): Promise<ControlTable> {
@@ -362,6 +392,9 @@ export async function controlTable(): Promise<ControlTable> {
       pending: waiting,
       manual: rows.filter((row) => row.section === "manual").sort(byUrgency),
     },
+    agentClosed: [...states.values()].map((state) => state.agentClosed)
+      .filter((row): row is AgentClosedRow => !!row && row.at.slice(0, 10) === iso(now).slice(0, 10))
+      .sort((a, b) => b.at.localeCompare(a.at)),
     strip: [...states.values()].map((state) => state.scan).filter((row): row is ScanRow => !!row)
       .sort((a, b) => (a.deadline?.at ?? "9").localeCompare(b.deadline?.at ?? "9") || a.reference.localeCompare(b.reference)),
     waitingCloseToDeadline: waiting.filter((row) => row.deadline

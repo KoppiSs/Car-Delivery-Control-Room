@@ -207,7 +207,7 @@ export function CustomerEmailCard({ detail, onUpdate }: { detail: Detail; onUpda
         <p className="agent-approval-note">This email only informs. The order stays where it is; if {name} writes back anyway, it shows as a new reply.</p>
         {replyFor === recipient ? <ReplyComposer from={name} question={current.templateLabel} busy={busy}
           initial="Thanks for letting me know. Can someone call me about it?"
-          onRecord={(_answer, text) => { setReplyFor(null); void act("reply", { recipient, answer: "other", text }, `Simulated reply from ${name} recorded.`) }}
+          onRecord={(_answer, text, unchanged) => { setReplyFor(null); void act("reply", { recipient, answer: "other", text, source: unchanged ? "scripted" : "operator" }, `Simulated reply from ${name} recorded.`) }}
           onCancel={() => setReplyFor(null)} />
           : <div className="agent-actions">
             <button type="button" className={`agent-secondary ${styles.small}`} disabled={busy} onClick={() => setReplyFor(recipient)}>Simulate: {name} writes back anyway</button>
@@ -220,7 +220,7 @@ export function CustomerEmailCard({ detail, onUpdate }: { detail: Detail; onUpda
           initial={recipient === "customer" ? "Agreed, go ahead with the new time." : "Yes, that works."}
           quickPicks={recipient === "customer" ? { agree: "Agreed, go ahead with the new time.", decline: "That doesn't work for us, please call me." }
             : { agree: "Yes, that works.", decline: "No, we can't do that time." }}
-          onRecord={(answer, text) => { setReplyFor(null); void act("reply", { recipient, answer, text }, `Simulated reply from ${name} recorded.`) }}
+          onRecord={(answer, text, unchanged) => { setReplyFor(null); void act("reply", { recipient, answer, text, source: answer !== "other" || unchanged ? "scripted" : "operator" }, `Simulated reply from ${name} recorded.`) }}
           onCancel={() => setReplyFor(null)} />
           : <div className="agent-actions">
             <button type="button" className={`agent-secondary ${styles.small}`} disabled={busy} onClick={() => setReplyFor(recipient)}>Simulate reply</button>

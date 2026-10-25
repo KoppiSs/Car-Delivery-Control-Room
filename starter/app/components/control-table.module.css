@@ -56,3 +56,12 @@
 @media (max-width: 900px) { .stripRows li { grid-template-columns: 1fr; } }
 
 .found_by_agent, .agent_unsure { background: var(--orange-bg); color: var(--orange-ink); }
+
+.reopened { background: var(--orange-bg); color: var(--orange-ink); }
+/* What the agent closed today: one quiet collapsed line at the bottom. */
+.closed { margin: 6px 2px 0; padding: 10px 14px; border: 1px solid var(--hair); border-radius: 10px; background: var(--tray); font-size: 13px; }
+.closed summary { cursor: pointer; font-weight: 500; color: var(--muted); }
+.closed ul { display: grid; gap: 10px; margin-top: 10px; padding: 0; list-style: none; }
+.closed li { display: grid; gap: 4px; justify-items: start; padding-top: 10px; border-top: 1px solid var(--hair-soft); }
+.closedReply { font-style: italic; color: var(--brown); }
+.closedReply .flag { margin-left: 8px; font-style: normal; }

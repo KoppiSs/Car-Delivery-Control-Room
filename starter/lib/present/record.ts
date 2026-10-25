@@ -7,6 +7,7 @@ import {
 } from "./bundle"
 import { describeEvent } from "./events"
 import { humanize, label, labelIn, laneLabel } from "./labels"
+import { replySourceLabel } from "./names-text"
 import { dayKey, fmtDateTime, fmtDay, fmtDayHeading, fmtMoney, fmtRange, fmtWeekday, isBefore, relativeTo } from "./time"
 import type {
   AccessView, Actor, AlertView, AssignmentView, AttentionItem, ClaimView, ContactView, CustodyView, DocumentView, ExpenseView, Fact,
@@ -315,6 +316,7 @@ function messageView(bundle: Bundle, message: Bundle["messages"][number]): Messa
     internal: str(d.visibility) === "INTERNAL" || channel === "internal_note",
     language: str(d.language), evidenceCount: refCount(d.evidence_refs),
     otherOrder: message.orderId !== bundle.order.id ? orderRef(bundle, message.orderId) : null,
+    simulatedSource: replySourceLabel(d.reply_source),
   }
 }
 
