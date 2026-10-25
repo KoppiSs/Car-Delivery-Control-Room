@@ -81,7 +81,7 @@ export async function simulateFollowUpReply(orderId: string, answer: ReplyKind, 
     await tx.insert(operationalEvents).values({ id: `evt-${randomUUID()}`, orderId, command: "agent.follow_up_reply_simulated",
       targetType: "mock_action", targetId: action.id, recordedAt: now, details: {
         actor_type: party.actorType ?? kind, actor_id: party.id, source: "control_room_follow_up", simulated: true, simulated_by: "operator",
-        recipient_type: party.type, changes: { message_id: messageId, conversation_id: threadId, answer, body },
+        recipient_type: party.type, changes: { message_id: messageId, conversation_id: threadId, answer },
       } })
     const closed = await closeFollowUpOnReply(tx, { orderId, recipientType: party.type === "driver" ? "driver" : party.type as "customer" | "pickup_site" | "delivery_site",
       answer, messageId, conversationId: threadId, at: now })

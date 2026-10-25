@@ -11,8 +11,9 @@
 .option dt { color: var(--muted); }
 .option dd { margin: 0; color: var(--brown); }
 .late { color: var(--orange-ink) !important; }
-.only { display: grid; align-content: center; gap: 4px; padding: 14px; border: 1px dashed var(--sand); border-radius: 10px; }
 .small { font-size: 12.5px !important; color: var(--muted) !important; }
 .decided { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: #e5eee6; display: grid; gap: 6px; justify-items: start; }
 .next { font-size: 14px; }
 .kind { display: inline-block; margin-right: 6px; font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--subtle); }
+
+.footnote { margin-top: 8px; font-size: 12px !important; color: var(--subtle) !important; }

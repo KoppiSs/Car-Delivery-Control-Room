@@ -9,6 +9,9 @@ import { desc, eq } from "drizzle-orm"
 import { buildAgentGenerationRequest, isAgentProposal, parseAgentOutput, type AgentProposal } from "./agent"
 import { AgentReviewConflict, sameProposal } from "./agent-store"
 import { generateWithModel } from "./model-call"
+import { evidenceEvents } from "./evidence"
+import { INSTRUCTION_RULE, proposalProblem } from "./proposal-guard"
+import { safetyRule, safetyStopFor } from "./safety-stop"
 import { updateManualOrder } from "./agent-manual"
 import { nextActionTime } from "./clock"
 import { db } from "./db"
@@ -55,35 +58,49 @@ async function storeRejection(orderId: string, proposal: AgentProposal, reason: 
   })
 }
 
-/** Asks the model for a plan unlike every rejected one. Never throws for model problems. */
-async function regenerate(orderId: string): Promise<Exclude<RegenerateOutcome, { outcome: "taken_over" }>> {
-  const streak = await rejectionsInARow(orderId)
+type Steer = { correction: string; previousAction: string; previousWaitingOn?: string }
+type Generated = { outcome: "new"; proposal: AgentProposal } | { outcome: "no_other" } | { outcome: "no_suggestion"; reason: string } | { outcome: "failed"; reason: string }
+
+/**
+ * One guarded generation, used by "Generate" and by reject → regenerate. The evidence never carries
+ * anyone's words. A plan that repeats a rejected one, or that is not an instruction for us (first
+ * person, or not starting with something we do), gets one retry with the rule stated; if it still
+ * fails, nothing is saved and the card says "No suggestion yet". On an order with an open safety
+ * stop the instructions carry the safety rule, and a plan that has the car driven on is refused the same way.
+ */
+async function generateGuarded(orderId: string, steer: Steer | null, rejected: AgentProposal[]): Promise<Generated> {
   const loaded = await loadOrder(orderId)
-  if (!loaded) return { outcome: "failed", reason: "the order could not be loaded", rejectedInARow: streak.length }
-  const events = loaded.events.map((event) => ({ id: event.id, command: event.command, recordedAt: event.recordedAt.toISOString(), details: event.details }))
+  if (!loaded) return { outcome: "failed", reason: "the order could not be loaded" }
+  const events = evidenceEvents(loaded.events.map((event) => ({ id: event.id, command: event.command, recordedAt: event.recordedAt.toISOString(), details: event.details })))
   const context = { order: { id: orderId, reference: loaded.order.reference }, snapshot_at: loaded.bundle.snapshotAt, status: loaded.order.status,
     alerts: loaded.alerts.map((alert) => ({ signal: alert.signal, status: alert.status, severity: alert.severity, summary: alert.summary })) }
-  const rejected = streak.map((entry) => entry.proposal)
-  const steer = {
-    correction: [`Do not propose these again; the operator rejected them:`,
-      ...streak.map((entry, index) => `${index + 1}. "${entry.proposal.proposed_action}" (waiting on: ${entry.proposal.waiting_on_description ?? "nothing"}) — rejected because: ${entry.reason || "no reason given"}`),
-      `Propose a different action or ask a different party.`].join("\n").slice(0, 1900),
-    previousAction: rejected[0]?.proposed_action ?? "",
-    previousWaitingOn: rejected[0]?.waiting_on_description,
-  }
   const allowedIds = events.map((event) => event.id)
+  const safety = safetyStopFor(loaded.bundle)
+  const safetyText = safety.open ? safetyRule(safety) : ""
   const model = process.env.OLLAMA_MODEL || "llama3.2"
-  for (const temperature of [0, 0.8]) {
-    const request = buildAgentGenerationRequest(events, context, model, temperature ? 1 : 0, steer) as Record<string, unknown> & { options: Record<string, unknown> }
-    request.options = { ...request.options, temperature }
+  let guardProblem: string | null = null
+  let repeated = false
+  for (const attempt of [0, 1]) {
+    // The retry states the rule that was broken.
+    const rule = attempt && guardProblem ? `\n${INSTRUCTION_RULE}${safetyText ? `\n${safetyText}` : ""}` : ""
+    const current: Steer | undefined = steer || rule
+      ? { correction: `${steer?.correction ?? "Propose the next step for this order."}${rule}`.slice(0, 1990),
+        previousAction: steer?.previousAction ?? "", previousWaitingOn: steer?.previousWaitingOn }
+      : undefined
+    const request = buildAgentGenerationRequest(events, context, model, attempt, current) as Record<string, unknown> & { options: Record<string, unknown> }
+    request.options = { ...request.options, temperature: attempt ? 0.8 : 0 }
+    // A domain rule in the instructions, not an answer: the model still chooses the step from the records.
+    if (safetyText) request.system = `${request.system}\n${safetyText}`
     const result = await generateWithModel(request)
-    if (!result.ok) return { outcome: "failed", reason: result.reason, rejectedInARow: streak.length }
-    const proposal = parseAgentOutput(result.output, allowedIds, steer.correction)
+    if (!result.ok) return { outcome: "failed", reason: result.reason }
+    const proposal = parseAgentOutput(result.output, allowedIds, current?.correction)
     if (!proposal) {
-      if (temperature) return { outcome: "failed", reason: "the model's answer was not a complete plan", rejectedInARow: streak.length }
+      if (attempt) return { outcome: "failed", reason: "the model's answer was not a complete plan" }
       continue
     }
-    if (rejected.some((entry) => samePlan(entry, proposal))) continue
+    guardProblem = proposalProblem(proposal, { safetyStop: safety.open })
+    if (guardProblem) continue
+    if (rejected.some((entry) => samePlan(entry, proposal))) { repeated = true; continue }
     const saved = await db.transaction(async (tx) => {
       const [order] = await tx.select().from(orders).where(eq(orders.id, orderId)).for("update")
       if (!order || order.agentMode !== "AGENT" || order.status === "follow_up") return false
@@ -92,13 +109,39 @@ async function regenerate(orderId: string): Promise<Exclude<RegenerateOutcome, {
         .where(eq(orders.id, orderId))
       await tx.insert(operationalEvents).values({ id: `evt-${randomUUID()}`, orderId, command: "agent.proposal_revised", targetType: "order",
         targetId: orderId, recordedAt: now, details: { actor_type: "agent", actor_id: "local-agent", source: "control_room",
-          changes: { replaces_rejected: streak.length, temperature } } })
+          changes: { replaces_rejected: rejected.length, attempt } } })
       return true
     })
-    if (!saved) return { outcome: "failed", reason: "the order changed while the agent was thinking", rejectedInARow: streak.length }
-    return { outcome: "new", proposal, rejectedInARow: streak.length }
+    if (!saved) return { outcome: "failed", reason: "the order changed while the agent was thinking" }
+    return { outcome: "new", proposal }
   }
-  return { outcome: "no_other", rejectedInARow: streak.length }
+  if (guardProblem) return { outcome: "no_suggestion", reason: guardProblem }
+  return repeated ? { outcome: "no_other" } : { outcome: "failed", reason: "the model's answer was not a complete plan" }
+}
+
+/** "Generate proposal" (and "Prepare follow-up" with a steer): a fresh, guarded proposal. */
+export async function generateProposal(orderId: string, steerText?: string): Promise<Generated> {
+  return generateGuarded(orderId, steerText ? { correction: steerText, previousAction: "" } : null, [])
+}
+
+/** Asks the model for a plan unlike every rejected one. Never throws for model problems. */
+async function regenerate(orderId: string): Promise<Exclude<RegenerateOutcome, { outcome: "taken_over" }>> {
+  const streak = await rejectionsInARow(orderId)
+  const rejected = streak.map((entry) => entry.proposal)
+  const steer = {
+    correction: [`Do not propose these again; the operator rejected them:`,
+      ...streak.map((entry, index) => `${index + 1}. "${entry.proposal.proposed_action}" (waiting on: ${entry.proposal.waiting_on_description ?? "nothing"}) — rejected because: ${entry.reason || "no reason given"}`),
+      `Propose a different action or ask a different party.`].join("\n").slice(0, 1700),
+    previousAction: rejected[0]?.proposed_action ?? "",
+    previousWaitingOn: rejected[0]?.waiting_on_description,
+  }
+  const result = await generateGuarded(orderId, steer, rejected)
+  const rejectedInARow = streak.length
+  if (result.outcome === "new") return { outcome: "new", proposal: result.proposal, rejectedInARow }
+  if (result.outcome === "no_other") return { outcome: "no_other", rejectedInARow }
+  // Not an instruction for us twice: nothing usable came back, so say so plainly.
+  if (result.outcome === "no_suggestion") return { outcome: "failed", reason: `no usable suggestion (${result.reason.toLowerCase()})`, rejectedInARow }
+  return { outcome: "failed", reason: result.reason, rejectedInARow }
 }
 
 /**

@@ -4,6 +4,7 @@ import { buildRecordView } from "@/lib/present/record"
 import { caseStatements } from "@/lib/present/statements"
 import { controlStateFor } from "@/lib/present/control-table"
 import { namesFor, partiesFor } from "@/lib/present/names"
+import { safetyStopFor } from "@/lib/safety-stop"
 import { desc, eq } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { agentProposalFeedback } from "@/lib/schema"
@@ -30,5 +31,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     // Names for ids in the agent's text (shown instead of the ids), and everyone a follow-up can ask.
     names: namesFor(bundle, [JSON.stringify(order.agentProposal ?? ""), order.waitingOnDescription]),
     parties: partiesFor(bundle),
+    // An open safety stop: the card refuses a stored suggestion that has the car driven on.
+    safetyStop: safetyStopFor(bundle).open,
   })
 }

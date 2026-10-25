@@ -114,7 +114,8 @@ export function costOptions(bundle: Bundle, now: Date): CostOptions | null {
     const zone = carTravel ? deliveryZone : pickupZone
     return {
       id: row.id, kind: "travel",
-      what: `${str(d.provider) ? `${d.provider} ` : ""}${kind} departing ${dayTime(String(d.departure_at), pickupZone)}${str(d.capacity_note) ? ` (${d.capacity_note})` : ""}`,
+      // "Vela Coast Lines ferry, Sat 24 Oct 14:00 CEST": departure in the pickup side zone; "Quoted, not booked" lives in the cost.
+      what: `${str(d.provider) ? `${d.provider} ` : ""}${kind}, ${dayTime(String(d.departure_at), pickupZone)}`,
       costCents: cents, currency: str(d.currency),
       costText: cents === null ? "Cost not known" : `${money(cents, str(d.currency))} · Quoted, not booked`,
       arrivesAt, target,
@@ -176,6 +177,6 @@ export function costOptions(bundle: Bundle, now: Date): CostOptions | null {
   return {
     reason, options, onlyOne, notOnFile, keyAccount,
     recommendation: keyAccount && recommendable && recommendable.kind === "travel"
-      ? { optionId: recommendable.id, text: "Recommended: on-time delivery matters most for key accounts" } : null,
+      ? { optionId: recommendable.id, text: "On-time delivery matters most for key accounts." } : null,
   }
 }

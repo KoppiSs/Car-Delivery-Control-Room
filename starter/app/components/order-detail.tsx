@@ -16,7 +16,7 @@ import { ActivitySection, ConversationsSection, DecisionsSection, EvidenceSectio
 
 export type Detail = { order: { id: string; reference: string; status?: string; agentProposal?: unknown; agentMode?: string;
   agentDecision?: string; agentDecisionAt?: string | null; waitingOnDescription?: string | null }; view: RecordView; events: Row[]; agentFeedback?: AgentFeedbackEntry[]; statements?: CaseStatements; control?: ControlState | null
-  names?: Record<string, string>; parties?: Partial<Record<"customer" | "pickup_site" | "delivery_site" | "driver", { name: string } | null>> }
+  names?: Record<string, string>; safetyStop?: boolean; parties?: Partial<Record<"customer" | "pickup_site" | "delivery_site" | "driver", { name: string } | null>> }
 
 export function OrderPane({ detail, readOnly = false }: { detail: Detail; readOnly?: boolean }) {
   const [current, setCurrent] = useState(detail)

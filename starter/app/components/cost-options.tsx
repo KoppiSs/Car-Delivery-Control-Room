@@ -60,7 +60,9 @@ export function CostOptionsCard({ orderId, options, decision, busy, onDecided, o
       {options.options.map((option) => {
         const recommended = options.recommendation?.optionId === option.id
         return <article key={option.id} className={`${styles.option}${recommended ? ` ${styles.recommended}` : ""}${decision?.optionId === option.id ? ` ${styles.chosen}` : ""}`}>
-          <header>{option.labels.map((name) => <span key={name} className={styles.tag}>{LABELS[name]}</span>)}</header>
+          {/* The recommendation replaces the option's own tag; "Only option" shows only when nothing is recommended. */}
+          <header>{recommended ? <span className={styles.tag}>Recommended</span>
+            : option.labels.map((name) => <span key={name} className={styles.tag}>{LABELS[name]}</span>)}</header>
           {recommended && <p className={styles.recommendation}>{options.recommendation!.text}</p>}
           <p className={styles.what}>{option.what}</p>
           <dl>
@@ -72,12 +74,10 @@ export function CostOptionsCard({ orderId, options, decision, busy, onDecided, o
             onClick={() => setPicked(option)}>{picked?.id === option.id ? "Picked" : "Pick this"}</button>
         </article>
       })}
-      {(options.onlyOne || options.notOnFile.length > 0) && <div className={styles.only}>
-        {options.onlyOne && <p><b>{options.onlyOne.note}</b></p>}
-        {options.onlyOne?.missing && <p className={styles.small}>{options.onlyOne.missing}</p>}
-        {options.notOnFile.map((line) => <p key={line} className={styles.small}>{line}</p>)}
-      </div>}
     </div>
+    {/* What the data does not offer: one small grey line under the cards. */}
+    {(options.onlyOne || options.notOnFile.length > 0) && <p className={styles.footnote}>
+      {[options.onlyOne?.note, options.onlyOne?.missing, ...options.notOnFile].filter((line) => !!line).join(" · ")}</p>}
 
     {picked && <form className="agent-edit-form" onSubmit={(event) => { event.preventDefault(); void confirm() }}>
       <label htmlFor="cost-reason">Why this option? One line</label>

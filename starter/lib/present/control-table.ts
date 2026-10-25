@@ -21,6 +21,8 @@ import { readingFor } from "./statements"
 import { followUpRecipient } from "../follow-up-reply"
 import { namesFor, partiesFor, withNames } from "./names"
 import { replySourceLabel, verdictText } from "./names-text"
+import { driveOnProblem, instructionProblem } from "../proposal-guard"
+import { safetyStopFor } from "../safety-stop"
 import { SCAN_COMMANDS, plainIssue, scanIssue } from "../scan"
 
 /** When a request we are waiting on goes back to "Needs a decision" as "No reply yet". */
@@ -183,6 +185,7 @@ function stateFor(bundle: Bundle, supplement: Supplement, now: Date): ControlSta
   const mock = supplement.mock.get(id)
   const activeAlerts = bundle.alerts.filter((alert) => alert.status === "OPEN" || alert.status === "ACKNOWLEDGED")
   const failed = assessment.checks.filter((check) => check.outcome === "fail")
+  const safetyOpen = safetyStopFor(bundle, assessment).open
 
   const names = namesFor(bundle, [mock?.waitingOnDescription, String(bundle.order.details.agent_proposal_action ?? "")])
 
@@ -329,7 +332,10 @@ function stateFor(bundle: Bundle, supplement: Supplement, now: Date): ControlSta
   const row: ControlRow = {
     id, reference: bundle.order.reference, vehicle: card.vehicle, from: card.from.city, to: card.to.city, customer: card.customer,
     section, priority: assessment.priority, urgency: urgencyOf(assessment.priority), deadline, firstSeenAt: firstSeen(bundle, assessment),
-    line, suggestion: pendingProposal && typeof proposal === "string" ? withNames(proposal, names) : null,
+    // A stored suggestion that is not an instruction for us, or that has the car driven on during a
+    // safety stop, is never shown: "No suggestion yet".
+    line, suggestion: pendingProposal && typeof proposal === "string" && !instructionProblem(proposal)
+      && !(safetyOpen && driveOnProblem(proposal)) ? withNames(proposal, names) : null,
     flag, waiting: section === "pending" || flag?.kind === "no_reply" ? waiting : null,
   }
   return { row, note: SECTION_LABELS[section] }

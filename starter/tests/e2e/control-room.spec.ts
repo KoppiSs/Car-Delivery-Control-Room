@@ -10,7 +10,7 @@ import postgres from "postgres"
 
 const sql = postgres(process.env.DATABASE_URL ?? "", { max: 1 })
 // The last case scans every order in the warning strip, so all of them are saved and restored.
-const ORDERS = ["ord-00399", "ord-00299", "ord-00710", "ord-00075", "ord-00405", "ord-00439", "ord-00656", "ord-00806", "ord-01013"]
+const ORDERS = ["ord-00322", "ord-00399", "ord-00299", "ord-00710", "ord-00075", "ord-00405", "ord-00439", "ord-00656", "ord-00806", "ord-01013"]
 /** Orders the clicks depend on must be fresh; the other strip orders are only saved and restored, whatever state they are in. */
 const MUST_BE_FRESH = new Set(["ord-00399", "ord-00299", "ord-00710", "ord-00806", "ord-00439", "ord-00075"])
 const TABLES = ["messages", "conversations", "agent_mock_actions", "agent_proposal_feedback", "operational_events"] as const
@@ -253,4 +253,70 @@ test("Closed by the agent today: the reply shows its source; Reopen moves CD-420
   await expect(review.locator("a", { hasText: "CD-420806" }).getByText("Reopened by operator after the agent had closed it", { exact: true })).toBeVisible()
   const [event] = await sql`select command, details->>'actor_type' as actor from operational_events where order_id = 'ord-00806' and command like 'agent.scan_%' order by recorded_at desc limit 1`
   expect({ command: event.command, actor: event.actor }).toEqual({ command: "agent.scan_reopened", actor: "operator" })
+})
+
+// The proposal model must never speak as the driver. Stubbed answers: one in the driver's voice, then a proper instruction.
+const DRIVER_VOICE = JSON.stringify({
+  investigation_summary: [{ text: "Driver reports a red warning and has stopped safely.", source_event_ids: [] }],
+  executable_tool_call: { action_type: "driver.reply", payload: { description: "I received the message, but I'm still at the service area car park, waiting for further instructions." } },
+  waiting_on_description: "Driver to return confirmation of car park arrival",
+})
+const OUR_ACTION = JSON.stringify({
+  investigation_summary: [{ text: "Driver reports a red warning and has stopped safely.", source_event_ids: [] }],
+  executable_tool_call: { action_type: "dealer.ask_recovery", payload: { description: "Ask the dealer whether the car can wait at the service area until recovery arrives." } },
+  waiting_on_description: "Dealer confirms the recovery plan",
+})
+
+test("Generate: an answer in the driver's voice is retried once with the rule; the instruction is shown", async ({ page }) => {
+  await sql`update orders set agent_proposal = null, agent_decision = 'PENDING' where id = 'ord-00322'`
+  await stubModel({ response: DRIVER_VOICE }, { response: OUR_ACTION })
+  await page.goto("/orders/ord-00322")
+  await page.getByRole("button", { name: "Generate proposal" }).click()
+  await expect(page.getByText("Ask the dealer whether the car can wait at the service area until recovery arrives.").first()).toBeVisible()
+  await expect(page.getByText(/I received the message/)).toHaveCount(0)
+})
+
+test("Generate: the driver's voice twice → 'No suggestion yet', nothing saved", async ({ page }) => {
+  await sql`update orders set agent_proposal = null, agent_decision = 'PENDING' where id = 'ord-00322'`
+  await stubModel({ response: DRIVER_VOICE }, { response: DRIVER_VOICE })
+  await page.goto("/orders/ord-00322")
+  await page.getByRole("button", { name: "Generate proposal" }).click()
+  await expect(page.getByText("No suggestion yet.", { exact: false }).first()).toBeVisible()
+  await expect(page.getByText(/I received the message/)).toHaveCount(0)
+  const [order] = await sql`select agent_proposal from orders where id = 'ord-00322'`
+  expect(order.agent_proposal).toBeNull()
+})
+
+// CD-420322 has an open safety stop (red warning light): a plan that has the car driven on is refused.
+const DRIVE_ON = JSON.stringify({
+  investigation_summary: [{ text: "Driver reports a red warning and has stopped safely.", source_event_ids: [] }],
+  executable_tool_call: { action_type: "driver.ask_clearance", payload: { description: "Ask the driver whether the driver has already cleared to drive." } },
+  waiting_on_description: "Driver confirms whether the car can continue",
+})
+
+test("Safety stop: a stored 'cleared to drive' suggestion is not shown; a drive-on answer is retried and the recovery step shown", async ({ page }) => {
+  const stored = { proposed_action: "Ask the driver whether the driver has already cleared to drive.", decision_button_text: "Approve follow-up",
+    executable_tool_call: { action_type: "driver.ask_clearance", payload: { description: "Ask the driver whether the driver has already cleared to drive." } },
+    investigation_summary: [{ text: "Driver reports a red warning and has stopped safely.", source_event_ids: [] }],
+    waiting_on_description: "Driver confirms whether the car can continue" }
+  await sql`update orders set agent_proposal = ${sql.json(stored)}, agent_decision = 'PENDING' where id = 'ord-00322'`
+  await stubModel({ response: DRIVE_ON }, { response: OUR_ACTION })
+  await page.goto("/orders/ord-00322")
+  await expect(page.getByText("The stored suggestion did not pass the checks", { exact: false })).toBeVisible()
+  await expect(page.getByText(/breaks the safety rule/)).toBeVisible()
+  await page.getByRole("button", { name: "Generate proposal" }).click()
+  await expect(page.getByText("Ask the dealer whether the car can wait at the service area until recovery arrives.").first()).toBeVisible()
+  // The records themselves say "driver cleared to drive: no"; only the suggestion must be gone.
+  await expect(page.getByText("Ask the driver whether the driver has already cleared to drive.")).toHaveCount(0)
+})
+
+test("Safety stop: drive on twice → 'No suggestion yet', nothing saved", async ({ page }) => {
+  await sql`update orders set agent_proposal = null, agent_decision = 'PENDING' where id = 'ord-00322'`
+  await stubModel({ response: DRIVE_ON }, { response: DRIVE_ON })
+  await page.goto("/orders/ord-00322")
+  await page.getByRole("button", { name: "Generate proposal" }).click()
+  await expect(page.getByText("No suggestion yet.", { exact: false }).first()).toBeVisible()
+  await expect(page.getByText(/breaks the safety rule/)).toBeVisible()
+  const [order] = await sql`select agent_proposal from orders where id = 'ord-00322'`
+  expect(order.agent_proposal).toBeNull()
 })

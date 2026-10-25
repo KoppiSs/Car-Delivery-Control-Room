@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { investigationText, isAgentProposal, isExecutableAgentProposal, type AgentProposal } from "@/lib/agent"
-import { fetchAgentProposal } from "@/lib/agent-request"
+import { proposalProblem } from "@/lib/proposal-guard"
 import { FOLLOW_UP_RECIPIENT_LABELS, idsIn, withNames, type FollowUpRecipient } from "@/lib/present/names-text"
 import { fmtDateTime } from "@/lib/present/time"
 import type { Detail } from "./order-detail"
@@ -17,6 +17,8 @@ export function AgentProposalCard({ detail, onUpdate }: {
   const [followUp, setFollowUp] = useState(detail.order.status === "follow_up")
   const [waitingOn, setWaitingOn] = useState(detail.order.waitingOnDescription ?? "")
   const [proposal, setProposal] = useState<AgentProposal | null>(() => isAgentProposal(detail.order.agentProposal) ? detail.order.agentProposal : null)
+  // Set when the model's answer (or a stored proposal) is not an instruction for us: shown as "No suggestion yet".
+  const [noSuggestion, setNoSuggestion] = useState<string | null>(null)
   const [proposalError, setProposalError] = useState("")
   const [canRetryGeneration, setCanRetryGeneration] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -48,6 +50,8 @@ export function AgentProposalCard({ detail, onUpdate }: {
   useEffect(() => () => request.current?.abort(), [])
   // Names instead of record ids in the agent's text. The ids stay in the "Ids in this plan" toggle.
   const named = (text: string) => withNames(text, detail.names ?? {})
+  // A stored suggestion that is not an instruction for us, or that has the car driven on during a safety stop, is never shown.
+  const storedProblem = proposal ? proposalProblem(proposal, { safetyStop: detail.safetyStop }) : null
   const parties = detail.parties ?? {}
   const partyName = (recipient: FollowUpRecipient | "") => !recipient || recipient === "nobody" ? null : parties[recipient]?.name ?? null
   /** One picker for both approvals: everyone on file by name, plus "Nobody". */
@@ -74,12 +78,16 @@ export function AgentProposalCard({ detail, onUpdate }: {
     request.current = controller
     setLoading(true); setProposalError(""); setCanRetryGeneration(false); setLastCorrection(steer ?? "")
     try {
-      const data = await fetchAgentProposal({ orderId: detail.order.id, events: detail.events,
-        ...(steer ? { correction: steer, previousProposal: proposal } : {}), context: {
-          order: { id: detail.order.id, reference: detail.order.reference }, snapshot_at: detail.view.snapshotAt,
-          status: detail.view.header.status, attention: detail.view.attention, alerts: detail.view.alerts,
-        } }, { signal: controller.signal })
-      if (!controller.signal.aborted) { setProposal(data); setDecision("PENDING"); setDecisionAt(null); setDraft(null); onUpdate?.() }
+      // The server builds the evidence (with nobody's words in it) and only saves an instruction for us.
+      const response = await fetch(`/api/orders/${encodeURIComponent(detail.order.id)}/generate`, { method: "POST",
+        headers: { "Content-Type": "application/json" }, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(300_000)]),
+        body: JSON.stringify(steer ? { steer } : {}) })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error ?? `the server answered with HTTP ${response.status}`)
+      if (controller.signal.aborted) return
+      if (data.outcome === "new") { setProposal(data.proposal); setNoSuggestion(null); setDecision("PENDING"); setDecisionAt(null); setDraft(null); onUpdate?.() }
+      else if (data.outcome === "no_suggestion") setNoSuggestion(data.reason)
+      else throw new Error(`Couldn't make a suggestion: ${data.reason ?? "no reason was given"}.`)
     } catch (cause: unknown) {
       if (!controller.signal.aborted) { setCanRetryGeneration(true); setProposalError(cause instanceof Error ? cause.message : "The proposal couldn't be prepared. Please retry.") }
     } finally {
@@ -287,7 +295,15 @@ export function AgentProposalCard({ detail, onUpdate }: {
         </div>}
       <p className="agent-approval-note">For the demo. The suggested reply answers what we asked; you can change it before it is recorded.</p>
     </> : <>
-      {proposal ? <>
+      {proposal && storedProblem && !noSuggestion ? <><p><b>No suggestion yet.</b> The stored suggestion did not pass the checks, so it is not shown.</p>
+        <p className="agent-approval-note">{storedProblem}.</p>
+        <div className="agent-actions"><button type="button" className="agent-primary" disabled={loading} onClick={() => void generate()}>Generate proposal</button>
+          <button type="button" className="agent-secondary" disabled={manualBusy} onClick={() => void manualUpdate("takeover")}>Take Over</button></div></>
+      : noSuggestion ? <><p><b>No suggestion yet.</b> The agent's answer did not pass the checks, even after it was told the rule.</p>
+        <p className="agent-approval-note">{noSuggestion}.</p>
+        <div className="agent-actions"><button type="button" className="agent-primary" disabled={loading} onClick={() => { setNoSuggestion(null); void generate() }}>Try again</button>
+          <button type="button" className="agent-secondary" disabled={manualBusy} onClick={() => void manualUpdate("takeover")}>Take Over</button></div></>
+      : proposal ? <>
         <h3>What the agent found</h3><ul className="agent-readings">{proposal.investigation_summary.map((finding, index) => {
           // Findings are the agent's readings. Their sources resolve to who said what, and when.
           const ids = typeof finding === "string" ? [] : finding.source_event_ids
